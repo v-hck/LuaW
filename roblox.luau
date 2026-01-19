@@ -10,6 +10,7 @@
 		cache = {},
 		data = {
 			props = {},
+			props_reqs = {},
 			methods = {},
 			operators = {},
 			idk = {},
@@ -185,7 +186,8 @@ end
 				local methods = m[type]
 				local operators = op[type]
 				if methods then
-
+					if type == "table" then
+						lt[i] = setmetatable({obj}, {})
 				end
 			end
 		end; return s.unpack(lt)
