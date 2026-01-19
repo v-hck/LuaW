@@ -84,7 +84,7 @@ end
 -- port&save | port_save("____","____")
 	port_save("tostring","str")
 	port_save("tonumber","int")
-	port_save("loadstring","load")
+	port_save("loadstring","exec")
 
 --objects
 	-- o["_____"] = cloneref(game:GetService("_____"))
@@ -179,25 +179,16 @@ end
 	k.l, k.lw, k.luaw = k.dup(3, function(...)
 		local lt = {...}
 		for i,obj in lt do
-			local type = s.typeof(obj)
-			local prop = luav.data[type]
-			if obj and stable then
-				if type == "table" and not(obj.luav) then
-					local mlt = {__index = stable}
-					if metastable then for i,v in metastable do mlt[i] = v end end
-					lt[i] = setmetatable(obj, mlt)
-				elseif type == "function" then
-					local mlt = {__index = stable, __call = function(s, ...) return cf.LuaV(s[1](cf.unLuaV(...))) end}
-					if metastable then for i,v in metastable do mlt[i] = v end end
-					lt[i] = setmetatable({obj, luav = type}, mlt)
-				elseif type ~= "table" then
-					local mlt = {__index = function(s,arg) return stable[arg] or cf.LuaV(s[1][cf.unLuaV(arg)]) end,
-					__newindex = function(s,i,v) s[1][cf.unLuaV(i)] = cf.unLuaV(v) end}
-					if metastable then for i,v in metastable do mlt[i] = v end end
-					lt[i] = setmetatable({obj, luav = type}, mlt)
+			if obj then
+				local type = s.typeof(obj)
+				local props = p[type]
+				local methods = m[type]
+				local operators = op[type]
+				if methods then
+
 				end
 			end
-		end; return unpack(lt)
+		end; return s.unpack(lt)
 	end)
 
 	lt["ergerg"] = 123
