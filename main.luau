@@ -13,7 +13,6 @@
 			props_reqs = {},
 			methods = {},
 			operators = {},
-			idk = {},
 			text = {
 				letters = {},
 				numbers = {},
@@ -37,11 +36,9 @@
 		
 	local d = __luaw__.data
 		local p = d.props
+		local pr = d.props_reqs
 		local m = d.methods
 		local op = d.operators
-		local t = d.tables
-		local mt = d.metatables
-		local idk = d.idk
 		local txt = d.text
 			local ltt = txt.letters
 			local nms = txt.numbers
@@ -64,28 +61,25 @@
 
 	vdc = {"l", "n", "s", "ln", "ns", "sl", "lns", "ls", "nl", "sn", "snl"}
 
-getgenv()["gg"] = getgenv
 s["gg"] = getgenv
 
-local function port_save(name1, name2)
-	local func = s.gg()[name1]
-	s.gg()[name2] = func
+local function port_save(name2, ...)
+	local func = s.gg()
+	for _, name in {...} do func = func[name] end
+	g[name2] = func
 	s[name2] = func
 end
 
---ports | s.gg()["____"] = s.gg()["____"]["____"]
-	s.gg()["rint"] = s.gg()["math"]["random"]
-	s.gg()["byte"] = s.gg()["string"]["byte"]
-
 --save | s["____"] = s.gg()["____"]
-		s["typeof"] = s.gg()["typeof"]
-		s["unpack"] = s.gg()["unpack"]
-		s["type"] = s.gg()["type"]
+	s["typeof"] = s.gg()["typeof"]
+	s["unpack"] = s.gg()["unpack"]
+	s["type"] = s.gg()["type"]
 
 -- port&save | port_save("____","____")
-	port_save("tostring","str")
-	port_save("tonumber","int")
-	port_save("loadstring","exec")
+	port_save("str", "tostring")
+	port_save("int", "tostring")
+	port_save("exec", "tostring")
+	port_save("rint", "math", "random")
 
 --objects
 	-- o["_____"] = cloneref(game:GetService("_____"))
@@ -98,7 +92,7 @@ end
 		o["rf"] = cloneref(game:GetService("ReplicatedFirst"))
 		o["sg"] = cloneref(game:GetService("StarterGui"))
 		o["ms"] = cloneref(game:GetService("MaterialService"))
-		o["cg"] = gethui() or cloneref(game:GetService("CoreGui"))
+		o["cg"] = cloneref(game:GetService("CoreGui"))
 		o["cs"] = cloneref(game:GetService("TextChatService"))
 		o["ps"] = cloneref(game:GetService("PhysicsService"))
 		o["hs"] = cloneref(game:GetService("HttpService"))
@@ -166,28 +160,22 @@ end
 		end; return s.unpack(lt)
 	end)
 	
-	local hook_method_lt = {
-		__call = function(s,obj,...)
-			local method, args = obj.method, {...}
-			obj.method = nil
-			return s.load(`return obj[1]:{method}(s.unpack(args))`)()
-		end,
-		__index = }
-
-	for _,mm in meta_methods do hook_method_lt[mm] = error_hook_method end
-	d.hook_method = setmetatable({"hook_method"},hook_method_lt); meta_methods, hook_method_lt = nil, nil
-
 	k.l, k.lw, k.luaw = k.dup(3, function(...)
 		local lt = {...}
 		for i,obj in lt do
 			if obj then
 				local type = s.typeof(obj)
 				local props = p[type]
+				local wrap = pr[type]
 				local methods = m[type]
 				local operators = op[type]
-				if methods then
-					if type == "table" then
-						lt[i] = setmetatable({obj}, {})
+
+					
+
+				wrap[1] = obj
+
+				if type == "table" then
+					lt[i] = setmetatable(wrap, meta)
 				end
 			end
 		end; return s.unpack(lt)
