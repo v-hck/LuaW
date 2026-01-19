@@ -1,6 +1,7 @@
-
 local Path = "LuaW/main.luau"
-local Url = "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"
+local Url = "https://raw.githubusercontent.com/fgdergewrgegr/LuaW/refs/heads/main/roblox.luau"
+
+loadstring("https://raw.githubusercontent.com/fgdergewrgegr/LuaW/refs/heads/main/unc_fixer.luau")()
 
 local function safe_execute(code)
     local Success = pcall(function()
