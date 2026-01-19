@@ -1,5 +1,5 @@
 local Path = "LuaW/main.luau"
-local Url = "https://raw.githubusercontent.com/fgdergewrgegr/LuaW/refs/heads/main/roblox.luau"
+local Url = "https://raw.githubusercontent.com/fgdergewrgegr/LuaW/refs/heads/main/main.luau"
 
 loadstring("https://raw.githubusercontent.com/fgdergewrgegr/LuaW/refs/heads/main/unc_fixer.luau")()
 
