@@ -13,6 +13,7 @@
 			props_reqs = {},
 			methods = {},
 			operators = {},
+			meta = {},
 			text = {
 				letters = {},
 				numbers = {},
@@ -39,6 +40,7 @@
 		local pr = d.props_reqs
 		local m = d.methods
 		local op = d.operators
+		local mt = d.meta
 		local txt = d.text
 			local ltt = txt.letters
 			local nms = txt.numbers
@@ -84,7 +86,7 @@ end
 --objects
 	-- o["_____"] = cloneref(game:GetService("_____"))
 		o["w"] = cloneref(game:GetService("Workspace"))
-		o["l"] = cloneref(game:GetService("Lighting"))
+		o["lg"] = cloneref(game:GetService("Lighting"))
 		o["p"] = cloneref(game:GetService("Players"))
 		o["r"] = cloneref(game:GetService("RunService"))
 		o["db"] = cloneref(game:GetService("Debris"))
@@ -165,24 +167,14 @@ end
 		for i,obj in lt do
 			if obj then
 				local type = s.typeof(obj)
-				local props = p[type]
 				local wrap = pr[type]
-				local methods = m[type]
-				local operators = op[type]
-
-					
-
 				wrap[1] = obj
-
-				if type == "table" then
-					lt[i] = setmetatable(wrap, meta)
-				end
+				lt[i] = setmetatable(wrap, mt[type])
 			end
 		end; return s.unpack(lt)
 	end)
 
-	lt["ergerg"] = 123
-	str["ergerg"] = 321
+
 
 --normal
 	local o_r_Heartbeat, o_r_RenderStepped = o.r.Heartbeat, o.r.RenderStepped
@@ -195,8 +187,8 @@ end
 			end; return tt
 		end
 	end]]
-	n.qw, n.qwait, n.quick_wait = k.dup(3, s.load(`{ft1}o_r_Heartbeat{ft2}`))
-	n.pw, n.pwait, n.physic_wait = k.dup(3, s.load(`{ft1}o_r_RenderStepped{ft2}`))
+	n.qw, n.qwait, n.quick_wait = k.dup(3, s.exec(`{ft1}o_r_Heartbeat{ft2}`))
+	n.pw, n.pwait, n.physic_wait = k.dup(3, s.exec(`{ft1}o_r_RenderStepped{ft2}`))
 	n.tw, n.twait, n.task_wait = k.dup(3, task.wait); ft1,ft2 = nil,nil
 
 	n.random_text, n.rtext, n.rt = k.dup(3, function(length, input)
