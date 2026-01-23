@@ -11,8 +11,10 @@
 		data = {
 			props = {},
 			props_reqs = {},
+			props_stgs = {},
 			methods = {},
 			operators = {},
+			wraps = {},
 			meta = {},
 			text = {
 				letters = {},
@@ -37,9 +39,10 @@
 		
 	local d = __luaw__.data
 		local p = d.props
-		local pr = d.props_reqs
+		local ps = d.props_stgs
 		local m = d.methods
 		local op = d.operators
+		local ws = d.wraps
 		local mt = d.meta
 		local txt = d.text
 			local ltt = txt.letters
@@ -72,23 +75,23 @@ local function port_save(name2, ...)
 	s[name2] = func
 end
 
---save | s["____"] = s.gg()["____"]
-	s["typeof"] = s.gg()["typeof"]
-	s["unpack"] = s.gg()["unpack"]
-	s["type"] = s.gg()["type"]
-
--- port&save | port_save("____","____")
+-- port&save | port_save("____", "____")
 	port_save("str", "tostring")
 	port_save("int", "tostring")
 	port_save("exec", "tostring")
 	port_save("rint", "math", "random")
+	port_save("rget", "rawget")
+	port_save("rset", "rawset")
+	port_save("un", "unpack")
+	port_save("tp_", "type")
+	port_save("tpf", "typeof")
 
 --objects
 	-- o["_____"] = cloneref(game:GetService("_____"))
 		o["w"] = cloneref(game:GetService("Workspace"))
-		o["lg"] = cloneref(game:GetService("Lighting"))
 		o["p"] = cloneref(game:GetService("Players"))
 		o["r"] = cloneref(game:GetService("RunService"))
+		o["lg"] = cloneref(game:GetService("Lighting"))
 		o["db"] = cloneref(game:GetService("Debris"))
 		o["rs"] = cloneref(game:GetService("ReplicatedStorage"))
 		o["rf"] = cloneref(game:GetService("ReplicatedFirst"))
@@ -133,16 +136,16 @@ end
 		end; DCSCE = nil
 	
 --kernel
-	function k.type(obj)
-		local type = s.typeof(obj)
-		return (type == "table" and obj["_luaw_"]) or type
-	end
-
 	function k.duplicate(num, obj)
 		local lt = {}
 		for a=1,num do lt[a] = obj end
 		return s.unpack(lt)
 	end; k.d, k.dup = k.duplicate, k.duplicate
+
+	k.tp, k.type = k.d(2, function(obj)
+		local type = s.tp(obj)
+		return (type == "table" and obj["_type"]) or type
+	end)
 
 	-- k.md, k.mdup, k.multy_duplicate = k.d(3, function(num, ...)
 	-- 	local lt, dlt = {...}, {}
@@ -153,28 +156,54 @@ end
 	-- 	end; return s.unpack(dlt)
 	-- end)
 
-	k.ul, k.unlw, unluaw = k.dup(3, function(...)
+	k.il, k.islw, k.isluaw = k.d(3, function(obj)
+		return s.tpf(obj) == "table" and obj._type
+	end)
+
+	k.ul, k.unlw, unluaw = k.d(3, function(...)
 		local lt = {...}
 		for i,obj in lt do
-			if s.typeof(obj) == "table" and obj["_luaw_"] then
+			if k.il(obj) then
 				lt[i] = obj[1]
 			end
-		end; return s.unpack(lt)
+		end; return s.un(lt)
 	end)
-	
-	k.l, k.lw, k.luaw = k.dup(3, function(...)
+
+	k.l, k.lw, k.luaw = k.d(3, function(...)
 		local lt = {...}
 		for i,obj in lt do
-			if obj then
-				local type = s.typeof(obj)
+			if obj and not(s.tpf(obj) == "table" and obj["_type"]) then
+				local type = s.tpf(obj)
 				local wrap = pr[type]
-				wrap[1] = obj
+				wrap[1], wrap["_type"] = obj, type
 				lt[i] = setmetatable(wrap, mt[type])
 			end
-		end; return s.unpack(lt)
+		end; return s.un(lt)
 	end)
 
-
+	k.mk, k.make = l.dup(2, function()
+		mt, ws = {}, {}
+		for tp, ps in p do local lt = {}; for name, p in ps do lt[name] 
+		for tp, m in m do
+			local p,ps = p[tp], ps[tp]
+			local lt = {__index = function(s,i)
+				s._index += 1
+				local p = p[i]
+				return k.l(m[i] or (p and p[1]()) or s[1][i])
+			end, __newindex = function(s,i,v)
+				s._newindex += 1
+				local ps = ps[i]
+				if ps then 
+					if s.tpf(ps[1]) == s.tpf(v) then s[i.."_"] = v
+					else error(`<{v}> must be <{s.tpf(ps[1])}> for <{i}>`) end
+				else s[1][i] = v end
+			end, __call = function(s,w,...)
+				s._call += 1
+				return s[1](((k.il(w) and w[1]) or w),...)
+			end}; for name, o in op[i] do lt[name] = o end
+			mt[type] = setmetatable()
+		end
+	end)
 
 --normal
 	local o_r_Heartbeat, o_r_RenderStepped = o.r.Heartbeat, o.r.RenderStepped
