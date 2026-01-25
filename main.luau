@@ -7,7 +7,6 @@
 		},
 		objs = {},
 		save = {},
-		cache = {},
 		data = {
 			default_props = {}, -- type = {def_vs}
 			func_props = {}, -- name = {{vanme = vv}, func}
@@ -17,6 +16,10 @@
 			iters = {} -- type = {create_iter_lt_func}
 			wraps = {}, -- type = {all_def_vs}
 			meta = {}, -- type = {all_meta_funcs}
+			all_meta = {},
+			all_types = {},
+			universal_props = {}, -- name = v
+			cache_reqs = {},
 			text = {
 				letters = {},
 				numbers = {},
@@ -25,7 +28,8 @@
 			}
 		},
 		config = {
-			log = true
+			log = true,
+			warn = true
 		}
 	}
 
@@ -36,7 +40,6 @@
 
 	local o = __luaw__.objs
 	local s = __luaw__.save
-	local c = __luaw__.cache
 		
 	local d = __luaw__.data
 		local dp = d.default_props
@@ -47,6 +50,10 @@
 		local its = d.iters
 		local ws = d.wraps
 		local mt = d.meta
+		local amt = d.all_meta
+		local atp = d.all_types
+		local unip = d.universal_props
+		local cq = d.cache_reqs
 		local txt = d.text
 			local ltt = txt.letters
 			local nms = txt.numbers
@@ -57,6 +64,16 @@
 	local cfg = __luaw__.config
 
 --fast env set
+	amt = {"__index", "__newindex", "__call", "__add", "__sub", "__mul",
+	"__div", "__mod", "__pow", "__unm", "__eq", "__lt", "__le", "__concat",
+	"__tostring", "__len",  "__iter"}
+	atp = {"string", "number", "function", "Instance", "Vector3", "CFrame"}
+
+	for _,tp in atp do dp[tp], fp[tp], wm[tp], ws[tp], mt[tp], cq[tp] = {}, {}, {}, {}, {}, {} end
+
+	dp["Instance"]["_method"] = false
+
+
 	for a=65, 90 do ltt[#ltt+1] = string.char(a) end
 	for a=97, 122 do ltt[#ltt+1] = string.char(a) end
 
@@ -88,6 +105,8 @@ end
 	port_save("un", "unpack")
 	port_save("tp_", "type")
 	port_save("tpf", "typeof")
+	port_save("hash_", "crypt", "hash")
+	port_save("round", "math", "round")
 
 --objects
 	-- o["_____"] = cloneref(game:GetService("_____"))
@@ -138,12 +157,19 @@ end
 			o["getmsg"] = DCSCE:WaitForChild("SayMessageRequest")
 		end; DCSCE = nil
 	
---kernel
+--kernel	
 	function k.duplicate(num, obj)
 		local lt = {}
 		for a=1,num do lt[a] = obj end
 		return s.unpack(lt)
 	end; k.d, k.dup = k.duplicate, k.duplicate
+
+	k.h, k.hash = k.d(2, function(...)
+		local lt = {...}
+		for i,data in lt do
+			lt[i] = s.hash_(s.str(data), "md5")
+		end; return s.un(lt)
+	end)
 
 	k.tp, k.type = k.d(2, function(obj)
 		local type = s.tp(obj)
@@ -186,27 +212,35 @@ end
 
 	k.mk, k.make = l.dup(2, function()
 		local wmf = {{},{}}
-		mt, ws = {}, {}
+		for _,tp in atp do mt[tp], ws[tp] = {}, {} end
 		for tp,dp in dp do
 			local lt = {}
 			wmf[1][tp], wmf[2][tp] = {}, {}
 			for name,dp in dp do lt[name] = dp end
-			for name,slt in fp[tp] do for _,v in slt[1] do lt[name] = v end end
+			for name,slt in fp[tp] do for name,v in slt[1] do lt[name] = v end end
 			for name,slt in wm[tp] do 
-				for _,v in slt[1] do lt[name] = v end 
+				for name,v in slt[1] do lt[name] = v end 
 				for _,bind in slt[2] do wmf[(slt[3] and 1) or 2][tp][bind] = slt[4] end
-			end
+			end; for _,name in cq[tp] do lt[name] = {} end
 			ws[tp] = lt
 		end
 		for tp, m in m do
+			local fp = fp[tp]
 			local lt = {__index = function(s,i)
-				local p = p[i]
-				return k.l(m[i] or (p and p[2](s)) or s[1][i])
+				local p, m = fp[i], m[i]
+				if p then return p[2](w,i)
+				elseif m then return m
+				else
+					local m = k.l(s[1][i])
+					m._method = true
+					return m
+				end
 			end, __newindex = function(s,i,v)
 				s[1][i] = v
 			end, __call = function(s,w,...)
-				return s[1](((k.il(w) and w[1]) or w),...)
-			end}; for name,o in op[i] do lt[name] = o end
+				return s[1](((s._method and w[1]) or w),...)
+			end, __iter = function(s) return s.next, s._iter, nil end}
+			for name,o in op[i] do lt[name] = o end
 			for meta,func in lt do
 				local smod, emod = wmf[1][tp][meta], wmf[2][tp][meta]
 				if smod then lt[meta] = function(...) return func(smod(...)) end end
@@ -240,7 +274,7 @@ end
 	n.tw, n.twait, n.task_wait = k.dup(3, task.wait); ft1,ft2 = nil,nil
 
 	n.random_text, n.rtext, n.rt = k.dup(3, function(length, input)
-		if cfg.debug then
+		if cfg.warn then
 			if input == "" then
 				warn('random_text: input == ""')
 				input = "l"
@@ -261,20 +295,20 @@ end
 		end; return output
 	end)
 
-	n.chat, n.cht, n.ct = k.dup(3, function(msg)
+	n.chat, n.cht, n.ct = k.d(3, function(msg)
 		if o.cs.ChatVersion == Enum.ChatVersion.TextChatService then
-			o.cs.TextChannels.RBXGeneral[1]:SendAsync(k.l(msg):c("os"))
+			o.cs.TextChannels.RBXGeneral[1]:SendAsync(s.str(msg)[1])
 		elseif o.saymsg then
-			o.saymsg:FireServer(k.l(msg):c("os"), "All")
+			o.saymsg:FireServer(s.str(msg)[1], "All")
 		end
 	end)
 
-	n.system_chat, n.schat, n.sc = k.dup(3, function(msg)
-		o.p:chat(k.l(msg):c("os"))
+	n.system_chat, n.schat, n.sc = k.d(3, function(msg)
+		o.p:chat(s.s.str(msg)[1])
 	end)
 
-	n.bypass_chat, n.bchat, n.bc = k.dup(3, function(msg, num, length)
-		if k.ul(msg) == "" then n.schat(k.l("can ")*(num or 10))
+	n.bypass_chat, n.bchat, n.bc = k.d(3, function(msg, num, length)
+		if msg == "" then n.schat(k.l("can ")*(num or 10))
 		else local can = k.l("can ")*(length or 10)
 			for a=1,num or (#msg/10)+1 do
 				n.echat(can)
@@ -284,9 +318,63 @@ end
 		end
 	end)
 
-	n.mouse_ckick, n.mclick, n.mck = k.dup(3, function()
+	n.mouse_ckick, n.mclick, n.mck = k.d(3, function()
 		o.vim:SendMouseButtonEvent(o.m.X, o.m.Y, 0, true, game, 0)
 		n.qw(0.01)
 		o.vim:SendMouseButtonEvent(o.m.X, o.m.Y, 0, false, game, 0)
 	end)
 
+	n.ifo, n.if_or = k.d(2, function(b, v1, v2)
+		if not(v2) then return b or v1
+		else return (b and v1) or v2
+	end)
+
+-- func_props
+	-- universal
+		local lt = {}
+		lt._age = {{}, function(w) return tick()-w._created end}
+		for tp,slt in fp do for name,data in lt do fp[tp][name] = data end end
+
+-- wraps_mods
+	-- universal
+		local lt = {}
+		lt[#lt+1] = {{_last_interaction=0}, amt, true, function(w,...) w._last_interaction = tick(); return w,... end}
+		for tp,slt in wm do for _,data in lt do wm[tp][#wm[tp]+1] = data end end
+	
+	-- function TODO: time of all acts
+	
+-- methods 
+	-- universal
+		-- local lt = {}
+		-- for tp,slt in m do for name,func in lt do m[tp][name] = func end end
+	
+	-- string
+		local tp = "string"
+		local lt, cq = m[tp], cq[tp]
+			function lt:run(...)
+				local h, c = k.h(self), self._cache["run"]
+				local func = c[h]
+				if func then return func(...)
+				else
+					local func = s.exec(self)
+					c[h] = func
+					return func(...)
+				end
+			end; cq[#cq+1] = "run"
+
+			-- TODO: fastload
+	
+	-- number
+		local tp = "number"
+		local lt, cq = m[tp], cq[tp]
+			function lt:in(mx, mn) mn = (mn or 0); return mx >= self and self >= mn end
+
+	-- function
+		local tp = "function"
+		local lt, cq = m[tp], cq[tp]
+
+-- operators
+	-- universal TODO: move wrom mk
+	-- string TODO: -str == str:reverse()
+	-- function TODO: -func == s.pcl(func)
+	-- table TODO: -table == {v=i}
