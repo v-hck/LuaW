@@ -9,13 +9,14 @@
 		save = {},
 		cache = {},
 		data = {
-			props = {},
-			props_reqs = {},
-			props_stgs = {},
-			methods = {},
-			operators = {},
-			wraps = {},
-			meta = {},
+			default_props = {}, -- type = {def_vs}
+			func_props = {}, -- name = {{vanme = vv}, func}
+			wraps_mods = {}, -- type = {{vanme = vv}, {binds}, start_or_end, func}
+			methods = {}, -- name = func
+			operators = {}, -- __name = func
+			iters = {} -- type = {create_iter_lt_func}
+			wraps = {}, -- type = {all_def_vs}
+			meta = {}, -- type = {all_meta_funcs}
 			text = {
 				letters = {},
 				numbers = {},
@@ -24,7 +25,7 @@
 			}
 		},
 		config = {
-			debug = true
+			log = true
 		}
 	}
 
@@ -38,10 +39,12 @@
 	local c = __luaw__.cache
 		
 	local d = __luaw__.data
-		local p = d.props
-		local ps = d.props_stgs
+		local dp = d.default_props
+		local fp = d.func_props
+		local wm = wraps_mods
 		local m = d.methods
 		local op = d.operators
+		local its = d.iters
 		local ws = d.wraps
 		local mt = d.meta
 		local txt = d.text
@@ -172,36 +175,52 @@ end
 	k.l, k.lw, k.luaw = k.d(3, function(...)
 		local lt = {...}
 		for i,obj in lt do
-			if obj and not(s.tpf(obj) == "table" and obj["_type"]) then
-				local type = s.tpf(obj)
-				local wrap = pr[type]
-				wrap[1], wrap["_type"] = obj, type
-				lt[i] = setmetatable(wrap, mt[type])
+			if obj and not(k.il(obj)) then
+				local tp = s.tpf(obj)
+				local wrap = pr[tp]
+				wrap[1], wrap["_iter"] = obj, its[tp](obj)
+				lt[i] = setmetatable(wrap, mt[tp])
 			end
 		end; return s.un(lt)
 	end)
 
 	k.mk, k.make = l.dup(2, function()
+		local wmf = {{},{}}
 		mt, ws = {}, {}
-		for tp, ps in p do local lt = {}; for name, p in ps do lt[name] 
+		for tp,dp in dp do
+			local lt = {}
+			wmf[1][tp], wmf[2][tp] = {}, {}
+			for name,dp in dp do lt[name] = dp end
+			for name,slt in fp[tp] do for _,v in slt[1] do lt[name] = v end end
+			for name,slt in wm[tp] do 
+				for _,v in slt[1] do lt[name] = v end 
+				for _,bind in slt[2] do wmf[(slt[3] and 1) or 2][tp][bind] = slt[4] end
+			end
+			ws[tp] = lt
+		end
 		for tp, m in m do
-			local p,ps = p[tp], ps[tp]
 			local lt = {__index = function(s,i)
-				s._index += 1
 				local p = p[i]
-				return k.l(m[i] or (p and p[1]()) or s[1][i])
+				return k.l(m[i] or (p and p[2](s)) or s[1][i])
 			end, __newindex = function(s,i,v)
-				s._newindex += 1
-				local ps = ps[i]
-				if ps then 
-					if s.tpf(ps[1]) == s.tpf(v) then s[i.."_"] = v
-					else error(`<{v}> must be <{s.tpf(ps[1])}> for <{i}>`) end
-				else s[1][i] = v end
+				s[1][i] = v
 			end, __call = function(s,w,...)
-				s._call += 1
 				return s[1](((k.il(w) and w[1]) or w),...)
-			end}; for name, o in op[i] do lt[name] = o end
-			mt[type] = setmetatable()
+			end}; for name,o in op[i] do lt[name] = o end
+			for meta,func in lt do
+				local smod, emod = wmf[1][tp][meta], wmf[2][tp][meta]
+				if smod then lt[meta] = function(...) return func(smod(...)) end end
+				func = lt[meta]
+				if emod then lt[meta] = function(...) return emod(func(...)) end end
+			end
+			if cfg.log then 
+				for meta,func in lt do
+					local v = meta:sub(2,-1)
+					ws[tp][v] = 0
+					lt[meta] = function(s,...) s[v] += 1; return func(s,...) end
+				end
+			end
+			mt[tp] = lt
 		end
 	end)
 
