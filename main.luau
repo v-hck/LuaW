@@ -1,4 +1,6 @@
+getgc()
 --init env
+local __luaw__ = getgenv().__luaw__
 	getgenv().__luaw__ = {
 		funcs = {
 			kenrel = {},
@@ -13,7 +15,7 @@
 			wraps_mods = {}, -- type = {{vanme = vv}, {binds}, start_or_end, overwrite, func}
 			methods = {}, -- name = func
 			operators = {}, -- name = func
-			iters = {} -- type = {create_iter_lt_func}
+			iters = {}, -- type = {create_iter_lt_func}
 			wraps = {}, -- type = {all_def_vs}
 			meta = {}, -- type = {all_meta_funcs}
 			all_meta = {},
@@ -44,7 +46,7 @@
 	local d = __luaw__.data
 		local dp = d.default_props
 		local fp = d.func_props
-		local wm = wraps_mods
+		local wm = d.wraps_mods
 		local m = d.methods
 		local op = d.operators
 		local its = d.iters
@@ -107,6 +109,10 @@ end
 	port_save("tpf", "typeof")
 	port_save("hash_", "crypt", "hash")
 	port_save("round", "math", "round")
+	port_save("tcln", "table", "clone")
+	port_save("pcl", "pcall")
+	port_save("rvrs", "string", "reverse")
+	port_save("gsub", "string", "gsub")
 
 --objects
 	-- o["_____"] = cloneref(game:GetService("_____"))
@@ -130,7 +136,7 @@ end
 	-- o["_____"] = 
 		o["inf"] = 1/0
 		o["nan"] = 0/0
-		o["mhv3"] = Vector3.new("inf", "inf", "inf")
+		o["mhv3"] = Vector3.new(o["inf"], o["inf"], o["inf"])
 		o["nv3"] = Vector3.new()
 
 	-- o["_____"] = o._____.
@@ -203,52 +209,38 @@ end
 		for i,obj in lt do
 			if obj and not(k.il(obj)) then
 				local tp = s.tpf(obj)
-				local wrap = pr[tp]
+				local wrap = ws[tp]
 				wrap[1], wrap["_iter"] = obj, its[tp](obj)
 				lt[i] = setmetatable(wrap, mt[tp])
 			end
 		end; return s.un(lt)
 	end)
 
-	k.mk, k.make = l.dup(2, function()
+	k.mk, k.make = k.d(2, function()
 		local wmf = {{},{}}
 		for _,tp in atp do mt[tp], ws[tp] = {}, {} end
 		for tp,dp in dp do
-			local lt = {}
+			local lt = {} 
 			wmf[1][tp], wmf[2][tp] = {}, {}
 			for name,dp in dp do lt[name] = dp end
-			for name,slt in fp[tp] do for name,v in slt[1] do lt[name] = v end end
-			for name,slt in wm[tp] do 
+			for _,slt in fp[tp] do for name,v in slt[1] do lt[name] = v end end
+			for _,slt in wm[tp] do 
 				for name,v in slt[1] do lt[name] = v end 
 				for _,bind in slt[2] do wmf[(slt[3] and 1) or 2][tp][bind] = {slt[3], slt[4]} end
 			end; for _,name in cq[tp] do lt[name] = {} end
 			ws[tp] = lt
 		end
 		for tp, m in m do
-			local fp = fp[tp]
-			local lt = {__index = function(s,i)
-				local p, m = fp[i], m[i]
-				if p then return p[2](w,i)
-				elseif m then return m
-				else
-					local m = k.l(s[1][i])
-					m._method = true
-					return m
-				end
-			end, __newindex = function(s,i,v)
-				s[1][i] = v
-			end, __call = function(s,w,...)
-				return s[1](((s._method and w[1]) or w),...)
-			end, __iter = function(s) return s.next, s._iter, nil end}
-			for name,o in op[i] do lt[name] = o end
+			local op, lt = op[tp], {}
+			lt = s.tcln(op)
 			for meta,func in lt do
 				local smod, emod = wmf[1][tp][meta], wmf[2][tp][meta]
 				if smod then 
 					if smod[1] then lt[meta] = smod[2]
-					else local mod = smod[2]; lt[meta] = function(...) return func(mod(...)) end 
+					else local mod = smod[2]; lt[meta] = function(...) return func(mod(...)) end end
 				end; func = lt[meta]; if emod then 
 					if emod[1] then lt[meta] = emod[2]
-					else local mod = emod[2]; lt[meta] = function(...) return func(mod(...)) end
+					else local mod = emod[2]; lt[meta] = function(...) return func(mod(...)) end end
 				end
 			end
 			if cfg.log then 
@@ -295,7 +287,7 @@ end
 		else input = input:split("") end
 		local linput = #input
 		for a = 1, length or 10 do
-			output = output..input[rng(1, linput)]
+			output = output..input[s.rng(1, linput)]
 		end; return output
 	end)
 
@@ -336,26 +328,26 @@ end
 -- func_props
 	-- universal
 		local lt = {}
-		lt._age = {{}, function(w) return tick()-w._created end}
+		lt._age = {{}, function(self) return tick() - self._created end}
 		for tp,slt in fp do for name,data in lt do fp[tp][name] = data end end
 
 -- wraps_mods
 	-- universal
 		local lt = {}
-		lt[#lt+1] = {{_last_interaction=0}, amt, true, function(w,...) w._last_interaction = tick(); return w,... end}
+		lt[#lt+1] = {{_last_interaction=0}, amt, true, false, function(self,...) self._last_interaction = tick(); return self,... end}
 		for tp,slt in wm do for _,data in lt do wm[tp][#wm[tp]+1] = data end end
 	
 	-- function
 		local tp = "function"
 		local lt, cq = wm[tp], cq[tp]
-		lt[#lt+1] = {{_caching = false}, {"__call"}, true, true, function(s,...) 
+		lt[#lt+1] = {{_caching = false}, {"__call"}, true, true, function(self,...) 
 			local sig = {}
 			for _,arg in {...} do sig[_] = s.str(arg) end
 			sig = k.h(table.concat(sig))
 			local r = s._cache["__call"][sig]
 			if r then return s.un(r)
 			else
-				r = {s[1](((s._method and w[1]) or w),...)}
+				r = {s[1](((s._method and self[1]) or self),...)}
 				s._cache["__call"][sig] = r
 				return s.un(r)
 			end
@@ -385,23 +377,54 @@ end
 	-- number
 		local tp = "number"
 		local lt, cq = m[tp], cq[tp]
-		function lt:in(mx, mn) mn = (mn or 0); return mx >= self and self >= mn end
+		function lt:i(mx, mn) mn = (mn or 0); return mx >= self and self >= mn end
 
 	-- function
 		local tp = "function"
 		local lt, cq = m[tp], cq[tp]
 
 -- operators
-	-- universal TODO: move from mk 
+	-- universal
+		local lt = {}
+		lt.__index = function(self,i)
+			local p, m = fp[i], m[i]
+			if p then return p[2](self,i)
+			elseif m then return m
+			else
+				local m = k.l(self[1][i])
+				m._method = true
+				return m
+			end
+		end 
+		lt.__newindex = function(s,i,v) s[1][i] = v end 
+		lt.__call = function(s,w,...) return s[1](((s._method and w[1]) or w),...) end
+		lt.__iter = function(s) return s.next, s._iter, nil end
+		for _,tp in atp do op[tp] = lt end
+
 	-- string
 		local tp = "string"
 		local lt = op[tp]
-		function lt.__unm(s) return s[1]:reverse() end
+		lt.__unm = function(str1) return s.rvrs(str1[1]) end
+		-- lt.__add = function(str1, str2) return str1..str2 end NOTE: why not concat
+		lt.__sub = function(str1, str2)
+			local fstr2 = ""
+			for i=1,#str2 do fstr2 = fstr2..`[{s.sub(str2,i)}]` end
+			return s.gsub(s.str[1], k.ul(str2), "")
+		end
+		lt.__mul = function(str, num) str = str[1]; local fstr = ""; for a=1, num do fstr = fstr..str end; return k.l(fstr) end
+		lt.__pow = function(str, num) str = str[1]; for a=1, num do str = str..str end; return str end
+		lt.__div = function(str1, str2) str1 = str1[1]; local _,num = str1:gsub(str2, ""); return (num ~= 0 and num) end
+		lt.__concat = function(str1, str2) return k.l(s.str(k.ul(str1))..str2) end
+		lt.__eq = function(str, obj) return str[1] == k.ul(obj) end
+		lt.__lt = function(str, obj) return str[1] < k.ul(obj) end
+		lt.__le = function(str, obj) return str[1] <= k.ul(obj) end
+		lt.__len = function(str) return #str[1] end
 		
 	-- function
 		local tp = "function"
 		local lt = op[tp]
 		function lt.__unm(s) return function(...) s.pcl(s[1],...) end end
+
 	-- table 
 		local tp = "table"
 		local lt = op[tp]
