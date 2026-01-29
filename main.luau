@@ -10,9 +10,9 @@
 		data = {
 			default_props = {}, -- type = {def_vs}
 			func_props = {}, -- name = {{vanme = vv}, func}
-			wraps_mods = {}, -- type = {{vanme = vv}, {binds}, start_or_end, func}
+			wraps_mods = {}, -- type = {{vanme = vv}, {binds}, start_or_end, overwrite, func}
 			methods = {}, -- name = func
-			operators = {}, -- __name = func
+			operators = {}, -- name = func
 			iters = {} -- type = {create_iter_lt_func}
 			wraps = {}, -- type = {all_def_vs}
 			meta = {}, -- type = {all_meta_funcs}
@@ -220,7 +220,7 @@ end
 			for name,slt in fp[tp] do for name,v in slt[1] do lt[name] = v end end
 			for name,slt in wm[tp] do 
 				for name,v in slt[1] do lt[name] = v end 
-				for _,bind in slt[2] do wmf[(slt[3] and 1) or 2][tp][bind] = slt[4] end
+				for _,bind in slt[2] do wmf[(slt[3] and 1) or 2][tp][bind] = {slt[3], slt[4]} end
 			end; for _,name in cq[tp] do lt[name] = {} end
 			ws[tp] = lt
 		end
@@ -243,9 +243,13 @@ end
 			for name,o in op[i] do lt[name] = o end
 			for meta,func in lt do
 				local smod, emod = wmf[1][tp][meta], wmf[2][tp][meta]
-				if smod then lt[meta] = function(...) return func(smod(...)) end end
-				func = lt[meta]
-				if emod then lt[meta] = function(...) return emod(func(...)) end end
+				if smod then 
+					if smod[1] then lt[meta] = smod[2]
+					else local mod = smod[2]; lt[meta] = function(...) return func(mod(...)) end 
+				end; func = lt[meta]; if emod then 
+					if emod[1] then lt[meta] = emod[2]
+					else local mod = emod[2]; lt[meta] = function(...) return func(mod(...)) end
+				end
 			end
 			if cfg.log then 
 				for meta,func in lt do
@@ -326,7 +330,7 @@ end
 
 	n.ifo, n.if_or = k.d(2, function(b, v1, v2)
 		if not(v2) then return b or v1
-		else return (b and v1) or v2
+		else return (b and v1) or v2 end
 	end)
 
 -- func_props
@@ -341,7 +345,21 @@ end
 		lt[#lt+1] = {{_last_interaction=0}, amt, true, function(w,...) w._last_interaction = tick(); return w,... end}
 		for tp,slt in wm do for _,data in lt do wm[tp][#wm[tp]+1] = data end end
 	
-	-- function TODO: time of all acts
+	-- function
+		local tp = "function"
+		local lt, cq = wm[tp], cq[tp]
+		lt[#lt+1] = {{_caching = false}, {"__call"}, true, true, function(s,...) 
+			local sig = {}
+			for _,arg in {...} do sig[_] = s.str(arg) end
+			sig = k.h(table.concat(sig))
+			local r = s._cache["__call"][sig]
+			if r then return s.un(r)
+			else
+				r = {s[1](((s._method and w[1]) or w),...)}
+				s._cache["__call"][sig] = r
+				return s.un(r)
+			end
+		end}; cq[#cq+1] = "__call"
 	
 -- methods 
 	-- universal
@@ -351,30 +369,41 @@ end
 	-- string
 		local tp = "string"
 		local lt, cq = m[tp], cq[tp]
-			function lt:run(...)
-				local h, c = k.h(self), self._cache["run"]
-				local func = c[h]
-				if func then return func(...)
-				else
-					local func = s.exec(self)
-					c[h] = func
-					return func(...)
-				end
-			end; cq[#cq+1] = "run"
+		function lt:run(...)
+			local h, c = k.h(self), self._cache["run"]
+			local func = c[h]
+			if func then return func(...)
+			else
+				local func = s.exec(self)
+				c[h] = func
+				return func(...)
+			end
+		end; cq[#cq+1] = "run"
 
-			-- TODO: fastload
+		-- TODO: fastload
 	
 	-- number
 		local tp = "number"
 		local lt, cq = m[tp], cq[tp]
-			function lt:in(mx, mn) mn = (mn or 0); return mx >= self and self >= mn end
+		function lt:in(mx, mn) mn = (mn or 0); return mx >= self and self >= mn end
 
 	-- function
 		local tp = "function"
 		local lt, cq = m[tp], cq[tp]
 
 -- operators
-	-- universal TODO: move wrom mk
-	-- string TODO: -str == str:reverse()
-	-- function TODO: -func == s.pcl(func)
-	-- table TODO: -table == {v=i}
+	-- universal TODO: move from mk 
+	-- string
+		local tp = "string"
+		local lt = op[tp]
+		function lt.__unm(s) return s[1]:reverse() end
+		
+	-- function
+		local tp = "function"
+		local lt = op[tp]
+		function lt.__unm(s) return function(...) s.pcl(s[1],...) end end
+	-- table 
+		local tp = "table"
+		local lt = op[tp]
+		function lt.__unm(s) local r = {}; for i,v in s[1] do r[v] = i end; return r end
+
