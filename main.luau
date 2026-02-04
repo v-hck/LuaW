@@ -1,42 +1,55 @@
 --!strict
-type types = string|number|(...any)->(...any)|Instance|Vector3|CFrame|boolean|{[any]:any}
-type types_str = "string"|"number"|"function"|"Instance"|"Vector3"|"CFrame"|"boolean"|"table"
+--!optimize 2
+type types_str = "string"|"number"|"function"|"Instance"|"Vector3"|"CFrame"|"table"
 type meta_methods = "__index"|"__newindex"|"__call"|"__add"|"__sub"|"__mul"|
 	"__div"|"__mod"|"__pow"|"__unm"|"__eq"|"__lt"|"__le"|"__concat"|
 	"__tostring"|"__len"| "__iter"
 
-type luaw<t, ts> = {[number]:t , _type:ts, _method:boolean, _created:number, _last_interaction:number, _cache:{[string]: {[any]: any}}}
-type luaws = luaw<types,types_str>
-type all = types|luaws
+
+type types_lt<obj> = {["string"]: obj}&{["number"]: obj}&{["function"]: obj}&
+	{["Instance"]: obj}&{["Vector3"]: obj}&{["CFrame"]: obj}&{["table"]: obj}
+
+type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
+	{__add: obj}&{__sub: obj}&{__mul: obj}&{__div: obj}&{__mod: obj}&
+	{__pow: obj}&{__unm: obj}&{__eq: obj}&{__lt: obj}&{__le: obj}&
+	{__concat: obj}&{__tostring: obj}&{__len: obj}&{__iter: obj}
+
+
+type luaw<t> = {[number]:t , _type:types_str, _method:boolean, _created:number, _last_interaction:number, _cache:{[string]: {[any]: any}}}
+type luaws = luaw<any>
 
 --init env
 	local __luaw__
-	-- : {
+	-- :{ -- NOTE: annotation for checking the arch correct
+	-- 	help: {
+	-- 		all_meta: {meta_methods},
+	-- 		all_types: {types}
+	-- 	},
+	-- 	type_sysyem: {
+	-- 		help: {
+	-- 			cache_reqs: {[string]: {string}},
+	-- 			iters: types_lt<(types)->{[any]: any}>
+	-- 		},
+	-- 		raw: {
+	-- 			default_props: types_lt<{[string]: any}>,
+	-- 			func_props: types_lt<{[string]: {props: {[string]: any}, func:(...any)->...any}}>,
+	-- 			wraps_mods: types_lt<{{props: {[string]: any}, binds: {meta_methods}, start_or_end: boolean, overwrite: boolean, func: (...any)->...any}}>,
+	-- 			methods: types_lt<{[string]: (...any)->(...any)}>,
+	-- 			operators: types_lt<{[string]: (...any)->...any}>
+	-- 		},
+	-- 		compiled: {
+	-- 			wraps: types_lt<{[string|number]: any}>,
+	-- 			meta: types_lt<meta_methods_lt<(luaws, ...any)->...any>>
+	-- 		}
+	-- 	},
 	-- 	funcs: {
 	-- 		kernel: {[string]: (...any)->...any},
-	-- 		global: {[string]: (...any)->...any},
-	-- 		normal: {[string]: (...any)->...any}
+	-- 		normal: {[string]: (...any)->...any},
+	-- 		backups: {[string]: (...any)->...any}
 	-- 	},
-	-- 	objs: {[string]: any},
-	-- 	save: {[string]: (...any)->...any},
-	-- 	data: {
-	-- 		default_props: {[string]: {[string]: any}},
-	-- 		func_props: {[string]: {[string]: {props: {[string]: any}, func:(...any)->...any}}},
-	-- 		wraps_mods: {[string]: {{props: {[string]: any}, binds: {meta_methods}, start_or_end: boolean, overwrite: boolean, func: (...any)->...any}}},
-	-- 		methods: {[string]: {[string]: (...any)->(...any)}},
-	-- 		operators: {[string]: {[string]: (...any)->...any}},
-	-- 		iters: {[string]: (...any)->...any},
-	-- 		wraps: {[string]: {[string|number]: any}},
-	-- 		meta: {[string]: {meta_methods}},
-	-- 		all_meta: {meta_methods},
-	-- 		all_types: {types},
-	-- 		cache_reqs: {[string]: {string}},
-	-- 		text: {
-	-- 			letters: {string},
-	-- 			numbers: {string},
-	-- 			symbols: {string},
-	-- 			valid_combo: {string}
-	-- 		}
+	-- 	objects: {
+	-- 		roblox: {[string]: Instance},
+	-- 		luaw: {[string]: any}
 	-- 	},
 	-- 	config: {
 	-- 		log: boolean,
@@ -44,31 +57,35 @@ type all = types|luaws
 	-- 	}
 	-- } 
 	= {
+		help = {
+			all_meta = {},
+			all_types = {}
+		},
+		type_system = {
+			raw = {
+				default_props = {},
+				func_props = {},
+				wraps_mods = {},
+				methods = {},
+				operators = {}
+			},
+			compiled = {
+				wraps = {},
+				meta = {}
+			},
+			help = {
+				cache_reqs = {},
+				iters = {}
+			}
+		},
 		funcs = {
 			kernel = {},
-			global = {},
-			normal = {}
+			normal = {},
+			backups = {}
 		},
-		objs = {},
-		save = {},
-		data = {
-			default_props = {},
-			func_props = {},
-			wraps_mods = {}, -- type = {{vanme = vv}, {binds}, start_or_end, overwrite, func}
-			methods = {}, -- name = func
-			operators = {}, -- name = func
-			iters = {}, -- type = {create_iter_lt_func}
-			wraps = {}, -- type = {all_def_vs}
-			meta = {}, -- type = {all_meta_funcs}
-			all_meta = {},
-			all_types = {},
-			cache_reqs = {},
-			text = {
-				letters = {},
-				numbers = {},
-				symbols = {},
-				valid_combo = {}
-			}
+		objects = {
+			roblox = {},
+			luaw = {}
 		},
 		config = {
 			log = true,
@@ -76,42 +93,45 @@ type all = types|luaws
 		}
 	}
 
--- local __luaw__ = { -- TODO: rewrite root tree
--- 	raw = {
--- 		kernel = {},
--- 		type_sysyem = {
--- 			default_props = {},
--- 			
--- 		}
--- 	}
--- }
-
 	local f = __luaw__.funcs
 		local k = f.kernel
-		local g = f.global
 		local n = f.normal
+		local b = f.backups
+		local f = nil
 
-	local o = __luaw__.objs
-	local s = __luaw__.save
+	local o = __luaw__.objects
+		local ro = o.roblox
+		local lo = o.luaw
+		local o = nil
 		
-	local d = __luaw__.data
-		local dp = d.default_props
-		local fp = d.func_props
-		local wm = d.wraps_mods
-		local m = d.methods
-		local op = d.operators
-		local its = d.iters
-		local ws = d.wraps
-		local mt = d.meta
-		local amt = d.all_meta
-		local atp = d.all_types
-		local cq = d.cache_reqs
-		local txt = d.text
-			local ltt = txt.letters
-			local nms = txt.numbers
-			local sbl = txt.symbols
-			local vdc = txt.valid_combo
-			local ltls = {l=ltt, n=nms, s=sbl}
+	local ts = __luaw__.type_system
+		local rw = ts.raw
+			local dp = rw.default_props
+			local fp = rw.func_props
+			local wm = rw.wraps_mods
+			local m = rw.methods
+			local op = rw.operators
+
+		local cd = ts.compiled
+			local ws = cd.wraps
+			local mt = cd.meta
+
+		local tshp = ts.help
+			local cq = tshp.cache_reqs
+			local its = tshp.iters
+
+		-- FIX: rng text
+		-- local txt = d.text
+		-- 	local ltt = txt.letters
+		-- 	local nms = txt.numbers
+		-- 	local sbl = txt.symbols
+		-- 	local vdc = txt.valid_combo
+		-- 	local ltls = {l=ltt, n=nms, s=sbl}
+	
+	local hp = __luaw__.help
+		local amt = hp.all_meta
+		local atp = hp.all_types
+		local hp = nil
 
 	local cfg = __luaw__.config
 
@@ -121,55 +141,57 @@ type all = types|luaws
 	"__tostring", "__len",  "__iter"}
 	atp = {"string", "number", "function", "Instance", "Vector3", "CFrame", "boolean"}
 
-	for _,tp in atp do dp[tp], fp[tp], wm[tp], ws[tp], mt[tp], cq[tp] = {}, {}, {}, {}, {}, {} end
+	local atp_lt = {}
+	for _,tp in atp do atp_lt[tp] = {} end
+	for i,_ in rw do rw[i] = table.clone(atp_lt) end
+	for i,_ in cd do cd[i] = table.clone(atp_lt) end
+	for i,_ in tshp do tshp[i] = table.clone(atp_lt) end
+	local atp_lt = nil
 
 	dp["Instance"]["_method"] = false
 
-	for a=65, 90 do ltt[#ltt+1] = string.char(a) end
-	for a=97, 122 do ltt[#ltt+1] = string.char(a) end
+	-- FIX: rng text
+	-- for a=65, 90 do ltt[#ltt+1] = string.char(a) end
+	-- for a=97, 122 do ltt[#ltt+1] = string.char(a) end
+	-- for a=48, 57 do nms[#nms+1] = string.char(a) end
+	-- for a=32, 47 do sbl[#sbl+1] = string.char(a) end
+	-- for a=58, 64 do sbl[#sbl+1] = string.char(a) end
+	-- for a=91, 96 do sbl[#sbl+1] = string.char(a) end
+	-- for a=123, 126 do sbl[#sbl+1] = string.char(a) end
+	-- vdc = {"l", "n", "s", "ln", "ns", "sl", "lns", "ls", "nl", "sn", "snl"}
 
-	for a=48, 57 do nms[#nms+1] = string.char(a) end
+	b["gg"] = getgenv
 
-	for a=32, 47 do sbl[#sbl+1] = string.char(a) end
-	for a=58, 64 do sbl[#sbl+1] = string.char(a) end
-	for a=91, 96 do sbl[#sbl+1] = string.char(a) end
-	for a=123, 126 do sbl[#sbl+1] = string.char(a) end
-
-	vdc = {"l", "n", "s", "ln", "ns", "sl", "lns", "ls", "nl", "sn", "snl"}
-
-s["gg"] = getgenv
-
-local function port_save(name2:string, ...:string)
-	local func = s.gg()
-	for _, name in {...} do func = func[name] end
-	g[name2] = func
-	s[name2] = func
-end
+	local function port_save(name2:string, ...:string)
+		local obj = b.gg()
+		for _, name in {...} do obj = obj[name] end
+		b[name2] = obj
+	end
 
 -- port&save | port_save("____", "____")
 	-- NOTE: ONLY FOR EDIT: idk how to add correct annotation to port_save
-		s.str = tostring
-		s.int = tostring
-		s.exec = tostring
-		s.rget = rawget
-		s.rset = rawset
-		s.un = unpack
-		s.tp_ = type
-		s.tpf = typeof
-		s.pcl = pcall
-		s.rvrs = string.reverse
-		s.gsub = string.gsub
-		s.sub = string.sub
-		s.rep = string.rep
-		s.tcln = table.clone
-		s.tcnc = table.concat
-		s.round = math.round
-		s.rint = math.random
-		s.hash_ = crypt.hash
+		b.str = tostring
+		b.int = tonumber
+		b.exec = loadstring
+		b.rget = rawget
+		b.rset = rawset
+		b.un = unpack
+		b.tp_ = type
+		b.tpf = typeof
+		b.pcl = pcall
+		b.rvrs = string.reverse
+		b.gsub = string.gsub
+		b.sub = string.sub
+		b.rep = string.rep
+		b.tcln = table.clone
+		b.tcnc = table.concat
+		b.round = math.round
+		b.rint = math.random
+		b.hash_ = crypt.hash
 
 	port_save("str", "tostring")
-	port_save("int", "tostring")
-	port_save("exec", "tostring")
+	port_save("int", "tonumber")
+	port_save("exec", "loadstring")
 	port_save("rget", "rawget")
 	port_save("rset", "rawset")
 	port_save("un", "unpack")
@@ -187,73 +209,82 @@ end
 	port_save("hash_", "crypt", "hash")
 
 --objects
-	-- o["_____"] = cloneref(game:GetService("_____"))
-		o["w"] = cloneref(game:GetService("Workspace"))
-		o["p"] = cloneref(game:GetService("Players"))
-		o["r"] = cloneref(game:GetService("RunService"))
-		o["lg"] = cloneref(game:GetService("Lighting"))
-		o["db"] = cloneref(game:GetService("Debris"))
-		o["rs"] = cloneref(game:GetService("ReplicatedStorage"))
-		o["rf"] = cloneref(game:GetService("ReplicatedFirst"))
-		o["sg"] = cloneref(game:GetService("StarterGui"))
-		o["ms"] = cloneref(game:GetService("MaterialService"))
-		o["cg"] = cloneref(game:GetService("CoreGui"))
-		o["cs"] = cloneref(game:GetService("TextChatService"))
-		o["ps"] = cloneref(game:GetService("PhysicsService"))
-		o["hs"] = cloneref(game:GetService("HttpService"))
-		o["ts"] = cloneref(game:GetService("TeleportService"))
-		o["uis"] = cloneref(game:GetService("UserInputService"))
-		o["vim"] = cloneref(game:GetService("VirtualInputManager"))
+	-- luaw
+		-- TODO: rng text here
+	-- roblox
+		-- o["_____"] = cloneref(game:GetService("_____"))
+			ro["w"] = cloneref(game:GetService("Workspace"))
+			ro["p"] = cloneref(game:GetService("Players"))
+			ro["r"] = cloneref(game:GetService("RunService"))
+			ro["lg"] = cloneref(game:GetService("Lighting"))
+			ro["db"] = cloneref(game:GetService("Debris"))
+			ro["rs"] = cloneref(game:GetService("ReplicatedStorage"))
+			ro["rf"] = cloneref(game:GetService("ReplicatedFirst"))
+			ro["sg"] = cloneref(game:GetService("StarterGui"))
+			ro["ms"] = cloneref(game:GetService("MaterialService"))
+			ro["cg"] = cloneref(game:GetService("CoreGui"))
+			ro["cs"] = cloneref(game:GetService("TextChatService"))
+			ro["ps"] = cloneref(game:GetService("PhysicsService"))
+			ro["hs"] = cloneref(game:GetService("HttpService"))
+			ro["ts"] = cloneref(game:GetService("TeleportService"))
+			ro["uis"] = cloneref(game:GetService("UserInputService"))
+			ro["vim"] = cloneref(game:GetService("VirtualInputManager"))
 
-	-- o["_____"] = 
-		o["inf"] = 1/0
-		o["nan"] = 0/0
-		o["mhv3"] = Vector3.new(o["inf"], o["inf"], o["inf"])
-		o["nv3"] = Vector3.new()
+		-- o["_____"] = 
+			ro["inf"] = 1/0
+			ro["nan"] = 0/0
+			ro["mhv3"] = Vector3.new(ro.inf, ro.inf, ro.inf)
+			ro["nv3"] = Vector3.new()
 
-	-- o["_____"] = o._____.
-		o["me"] = o.p.LocalPlayer
-		o["old_char"] = o.me.Character
-		if o.old_char then
-			local char = o.old_char
-			o["old_hrp"] = char:FindFirstChild("HumanoidRootPart")
-			o["old_hum"] = char:FindFirstChild("Humanoid")
-			o["old_hd"] = char:FindFirstChild("Head")
-			o["old_tr"] = char:FindFirstChild("Torso")
-		end
-		o["cam"] = o.w.CurrentCamera
-		o["m"] = o.me:GetMouse()
-		o["name"] = o.me.Name
-		o["dname"] = o.me.DisplayName
-		-- o["pg"] = o.me.PlayerGui FIX:  TypeError: Key 'PlayerGui' not found in class 'Player' 
-		o["muid"] = o.me.UserId
-		o["rt"] = o.p.RespawnTime
+		-- o["_____"] = o._____.
+			ro["me"] = ro.p.LocalPlayer
+			ro["old_char"] = ro.me.Character
+			if ro.old_char then
+				local char = ro.old_char
+				ro["old_hrp"] = char:FindFirstChild("HumanoidRootPart")
+				ro["old_hum"] = char:FindFirstChild("Humanoid")
+				ro["old_hd"] = char:FindFirstChild("Head")
+				ro["old_tr"] = char:FindFirstChild("Torso")
+			end
+			ro["cam"] = ro.w.CurrentCamera
+			ro["m"] = ro.me:GetMouse()
+			ro["name"] = ro.me.Name
+			ro["dname"] = ro.me.DisplayName
+			-- o["pg"] = o.me.PlayerGui FIX:  TypeError: Key 'PlayerGui' not found in class 'Player' 
+			ro["muid"] = ro.me.UserId
+			ro["rt"] = ro.p.RespawnTime
 
-		local DCSCE = o.rs:FindFirstChild("DefaultChatSystemChatEvents") :: TextChatService?
-		if DCSCE then
-			o["saymsg"] = DCSCE:WaitForChild("SayMessageRequest") :: RemoteEvent
-			o["getmsg"] = DCSCE:WaitForChild("SayMessageRequest") :: RemoteEvent
-			DCSCE = nil
-		end
+			local DCSCE = ro.rs:FindFirstChild("DefaultChatSystemChatEvents") :: TextChatService?
+			if DCSCE then
+				ro["saymsg"] = DCSCE:WaitForChild("SayMessageRequest") :: RemoteEvent
+				ro["getmsg"] = DCSCE:WaitForChild("SayMessageRequest") :: RemoteEvent
+				DCSCE = nil
+			end
 
 --kernel	
 	function k.duplicate<t>(num:number, obj:t):...t
 		local lt = {}
 		for a=1,num do lt[a] = obj end
-		return s.un(lt)
+		return b.un(lt)
 	end; k.d, k.dup = k.duplicate, k.duplicate
 
-	k.h, k.hash = k.d(2, function(...:any):string
-		local lt = {...}
-		for i,data in lt do
-			lt[i] = s.hash_(s.str(data), "md5")
-		end; return s.un(lt)
-	end)
-
-	k.tp, k.type = k.d(2, function(obj:all):string
-		local tp = s.tpf(obj)
+	k.tp, k.type = k.d(2, function(obj:any):string
+		local tp = b.tpf(obj)
 		return (tp == "table" and (obj::luaws)._type) or tp
 	end)
+	
+	function k.str(...:any):...luaw<string>
+		local lt = {...}
+		for i,obj in lt do lt[i] = b.str(obj) end
+		return b.un(lt)
+	end
+
+	function k.int(...:any):...luaw<number>
+		local lt = {...}
+		for i,v in lt do 
+			if b.tpf(v) == "table" and v.__tonumber then lt[i] = v:__tonumber()
+			else lt[i] = k.l(b.int(v)) end
+		end; return b.up(lt)
 
 	-- k.md, k.mdup, k.multy_duplicate = k.d(3, function(num, ...)
 	-- 	local lt, dlt = {...}, {}
@@ -264,29 +295,29 @@ end
 	-- 	end; return s.unpack(dlt)
 	-- end)
 
-	k.il, k.islw, k.isluaw = k.d(3, function(obj:all):string|boolean
-		return s.tpf(obj) == "table" and (obj::luaws)._type 
+	k.il, k.islw, k.isluaw = k.d(3, function(obj:any):string|boolean
+		return b.tpf(obj) == "table" and (obj::luaws)._type 
 	end)
 
-	k.ul, k.unlw, k.unluaw = k.d(3, function(...:all):...any
+	k.ul, k.unlw, k.unluaw = k.d(3, function(...:any):...any
 		local lt = {...}
 		for i,obj in lt do
 			if k.il(obj) then
 				lt[i] = (obj::luaws)[1]
 			end
-		end; return s.un(lt)
+		end; return b.un(lt)
 	end)
 
-	k.l, k.lw, k.luaw = k.d(3, function(...:all):...luaws
-		local lt = {...}::{any} -- NOTE: lt type must be all
+	k.l, k.lw, k.luaw = k.d(3, function<T>(...:T):...luaw<T> -- TODO:if self.i == func then ul(args) 
+		local lt = {...}::{any}
 		for i,obj in lt do
-			local tp = s.tpf(obj)
+			local tp = b.tpf(obj)
 			if obj and atp[tp] and not(k.il(obj)) then
 				local wrap = ws[tp]
 				wrap[1], wrap["_iter"] = obj, its[tp](obj)
 				lt[i] = setmetatable(wrap, mt[tp])
 			end
-		end; return s.un(lt)
+		end; return b.un(lt)
 	end)
 
 	k.mk, k.make = k.d(2, function()
@@ -305,7 +336,7 @@ end
 		end
 		for tp, m in m do
 			local op = op[tp]
-			local lt = s.tcln(op)
+			local lt = b.tcln(op)
 			for meta,func in lt do
 				local smod, emod = wmf[1][tp][meta], wmf[2][tp][meta]
 				if smod then 
@@ -318,19 +349,27 @@ end
 			end
 			if cfg.log then 
 				for meta,func in lt do
-					local v:string = s.sub(meta, 2,-1)
+					local v:string = b.sub(meta, 2,-1)
 					ws[tp][v] = 0
-					lt[meta] = function(self:luaws,...) self[v] += 1; return func(s,...) end
+					lt[meta] = function(self:luaws,...) self[v] += 1; return func(b,...) end
 				end
 			end
 			mt[tp] = lt
 		end
 	end)
 
+	k.h, k.hash = k.d(2, function(...:any):luaw<string>
+		local lt, r = {...}, ""
+		for i,data in lt do
+			r = b.hash_(r .. k.ul(b.str(data)), "md5")
+		end; return k.l(r)
+	end)
+
 --normal
-	local o_r_Heartbeat, o_r_RenderStepped = o.r.Heartbeat, o.r.RenderStepped
+	local o_r_Heartbeat, o_r_RenderStepped = ro.r.Heartbeat, ro.r.RenderStepped
 	local ft1, ft2 = [[return function(num)
 		local event = ]],[[
+		num = k.ul(num)
 		if not(num) then return event:Wait()
 		else local t, tt = tick(), 0
 			while tick() < t+num do
@@ -338,8 +377,9 @@ end
 			end; return tt
 		end
 	end]]
-	n.qw, n.qwait, n.quick_wait = k.dup(3, s.exec(`{ft1}o_r_Heartbeat{ft2}`))
-	n.pw, n.pwait, n.physic_wait = k.dup(3, s.exec(`{ft1}o_r_RenderStepped{ft2}`))
+
+	n.qw, n.qwait, n.quick_wait = k.dup(3, b.exec(`{ft1}o_r_Heartbeat{ft2}`)::(num:number?)->()) 
+	n.pw, n.pwait, n.physic_wait = k.dup(3, b.exec(`{ft1}o_r_RenderStepped{ft2}`)::(num:number?)->())
 	n.tw, n.twait, n.task_wait = k.dup(3, task.wait)
 
 	-- n.random_text, n.rtext, n.rt = k.dup(3, function(length, input)
@@ -364,23 +404,25 @@ end
 	-- 	end; return output
 	-- end)
 
-	n.chat, n.cht, n.ct = k.d(3, function(msg)
-		if o.cs.ChatVersion == Enum.ChatVersion.TextChatService then
-			o.cs.TextChannels.RBXGeneral:SendAsync(s.str(msg[1])) 
-		elseif o.saymsg then
-			o.saymsg:FireServer(s.str(msg), "All")
+	n.chat, n.cht, n.ct = k.d(3, function(msg:any)
+		if ro.cs.ChatVersion == Enum.ChatVersion.TextChatService then
+			ro.cs.TextChannels.RBXGeneral:SendAsync(k.ul(b.str(msg))) -- NOTE: ignore error
+		elseif ro.saymsg then
+			ro.saymsg:FireServer(k.ul(b.str(msg)), "All")
 		end
 	end)
 
-	n.system_chat, n.schat, n.sc = k.d(3, function(msg:luaws)
-		o.p:Chat(s.str(msg[1]))
+	n.system_chat, n.schat, n.sc = k.d(3, function(msg:any)
+		ro.p:Chat(k.ul(b.str(msg)))
 	end)
 
-	n.bypass_chat, n.bchat, n.bc = k.d(3, function(msg, num, length)
-		if msg == "" then n.schat(s.rep("can ", num or 10))
-		else local can = k.l("can ")*(length or 10)
+	n.bypass_chat, n.bchat, n.bc = k.d(3, function(msg:any, num:any, length:any)
+		num, length = k.l(k.int(num, length))
+		local can = k.l(b.rep("can ", num or 10))
+		if msg == "" then n.schat(can)
+		else
 			for a=1,num or (#msg/10)+1 do
-				n.echat(can)
+				n.schat(can)
 				n.qw(0.3)
 				n.chat(msg)
 			end
@@ -414,15 +456,13 @@ end
 		local tp = "function"
 		local lt, ccq = wm[tp], cq[tp]
 		lt[#lt+1] = {props={_caching = false}, binds={"__call"}, start_or_end=true, overwrite=true, func=function(self,...) 
-			local sig = {}
-			for _,arg in {...} do sig[_] = s.str(arg) end
-			sig = k.h(s.tc(sig))
-			local r = self._cache["__call"][sig]
-			if r then return s.un(r)
+			local sig = k.h(...)
+			local r = self._cache.__call[sig]
+			if r then return b.un(r)
 			else
-				r = {self[1](((s._method and self[1]) or self),...)}
+				r = {self[1](((b._method and self[1]) or self),...)}
 				self._cache["__call"][sig] = r
-				return s.un(r)
+				return b.un(r)
 			end
 		end}; ccq["__call"] = true
 
@@ -434,12 +474,12 @@ end
 	-- string
 		local tp = "string"
 		local lt, ccq = m[tp], cq[tp]
-		function lt:run(...)
+		function lt:run(...:any):...any
 			local h, c = k.h(self), self._cache["run"]
 			local func = c[h]
 			if func then return func(...)
 			else
-				local func = s.exec(self)
+				local func = b.exec(self)
 				c[h] = func
 				return func(...)
 			end
@@ -478,34 +518,34 @@ end
 	-- string
 		local tp = "string"
 		local lt = op[tp]
-		lt.__unm = function(str) return k.l(s.rvrs(str[1])) end
+		lt.__unm = function(str) return k.l(b.rvrs(str[1])) end
 		-- lt.__add = function(str1, str2) return str1..str2 end NOTE: why not concat
 		lt.__sub = function(str1, str2)
 			local fstr2 = ""
-			str2 = s.str(str2)
-			for i=1,#str2 do fstr2 = fstr2..`[{s.sub(str2,i)}]` end
-			local r,_ = s.gsub(str1[1], k.ul(str2), "")
+			str2 = b.str(str2)
+			for i=1,#str2 do fstr2 = fstr2..`[{b.sub(str2,i)}]` end
+			local r,_ = b.gsub(str1[1], k.ul(str2), "")
 			return r
 		end
-		lt.__mul = function(str, num:number):string return k.l(s.rep(str[1], k.ul(num))) end
-		lt.__pow = function(str, num:number):string return k.l(s.rep(str[1], k.ul(num) ^ k.ul(#str))) end
+		lt.__mul = function(str, num:number):string return k.l(b.rep(str[1], k.ul(num))) end
+		lt.__pow = function(str, num:number):string return k.l(b.rep(str[1], k.ul(num) ^ k.ul(#str))) end
 		lt.__div = function(str1, str2):number
 			local nstr2 = {}
-			str2 = k.ul(s.str(str2))
+			str2 = k.ul(b.str(str2))
 			for i=1,#str2 do nstr2[#nstr2+1] = `[{str2[i]}]` end
-			local _,num = s.gsub(str1[1], s.concat(nstr2))
+			local _,num = b.gsub(str1[1], b.concat(nstr2))
 			return k.l(num)
 		end
-		lt.__concat = function(str1, str2):string return k.l(str1[1]..k.ul(s.str(str2))) end
-		lt.__eq = function(str1, str2):boolean return k.l(k.ul(#str1) == k.ul(s.str(str2))) end
-		lt.__lt = function(str1, str2):boolean return k.l(k.ul(#str1) < k.ul(s.str(str2))) end
-		lt.__le = function(str1, str2):boolean return k.l(k.ul(#str1) <= k.ul(s.str(str2))) end
+		lt.__concat = function(str1, str2):string return k.l(str1[1]..k.ul(b.str(str2))) end
+		lt.__eq = function(str1, str2):boolean return k.l(k.ul(#str1) == k.ul(b.str(str2))) end
+		lt.__lt = function(str1, str2):boolean return k.l(k.ul(#str1) < k.ul(b.str(str2))) end
+		lt.__le = function(str1, str2):boolean return k.l(k.ul(#str1) <= k.ul(b.str(str2))) end
 		lt.__len = function(str):number return k.l(#str[1]) end
 		
 	-- function
 		local tp = "function"
 		local lt = op[tp]
-		lt.__unm = function(func) return function(...) return s.pcl(func[1],...) end end
+		lt.__unm = function(func) return function(...) return b.pcl(func[1],...) end end
 
 	-- table 
 		local tp = "table"
