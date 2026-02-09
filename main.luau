@@ -15,8 +15,17 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 	{__concat: obj}&{__tostring: obj}&{__len: obj}&{__iter: obj}
 
 
-type luaw<t> = {[number]:t , _type:types_str, _method:boolean, _created:number, _last_interaction:number, _cache:{[string]: {[any]: any}}}
+type luaw<t> = {[number]:t , _type:types_str, _method:boolean, _created:number, _last_interaction:number, _cache:{[string]: {[any]: any}}, _iter: {[any]: any}}
 type luaws = luaw<any>
+
+type str = luaw<string>
+type int = luaw<number>
+type lt = luaw<{[any]: any}>
+type func = luaw<<a...,r...>(a...)->r...>
+type inst = luaw<Instance>
+type v3 = luaw<Vector3>
+type cf = luaw<CFrame>
+
 
 --init env
 	local __luaw__
@@ -45,7 +54,8 @@ type luaws = luaw<any>
 	-- 	funcs: {
 	-- 		kernel: {[string]: (...any)->...any},
 	-- 		normal: {[string]: (...any)->...any},
-	-- 		backups: {[string]: (...any)->...any}
+	-- 		backups: {[string]: (...any)->...any},
+	-- 		orig: {[string]: (...any)->...any}
 	-- 	},
 	-- 	objects: {
 	-- 		roblox: {[string]: Instance},
@@ -67,7 +77,7 @@ type luaws = luaw<any>
 				func_props = {},
 				wraps_mods = {},
 				methods = {},
-				operators = {}
+				operators = {},
 			},
 			compiled = {
 				wraps = {},
@@ -81,7 +91,8 @@ type luaws = luaw<any>
 		funcs = {
 			kernel = {},
 			normal = {},
-			backups = {}
+			backups = {},
+			orig = {}
 		},
 		objects = {
 			roblox = {},
@@ -97,6 +108,7 @@ type luaws = luaw<any>
 		local k = f.kernel
 		local n = f.normal
 		local b = f.backups
+		local of = f.orig
 		local f = nil
 
 	local o = __luaw__.objects
@@ -149,6 +161,18 @@ type luaws = luaw<any>
 	local atp_lt = nil
 
 	dp["Instance"]["_method"] = false
+
+	local function collect_orig(lt)
+		for _,obj in lt do
+			local tp = typeof(obj)
+			if tp == "function" then
+				of[obj] = true
+			elseif tp == "table" then
+				collect_orig(obj)
+			end
+		end
+	end; collect_orig(getgenv())
+	local collect_orig = nil
 
 	-- FIX: rng text
 	-- for a=65, 90 do ltt[#ltt+1] = string.char(a) end
@@ -273,19 +297,6 @@ type luaws = luaw<any>
 		return (tp == "table" and (obj::luaws)._type) or tp
 	end)
 	
-	function k.str(...:any):...luaw<string>
-		local lt = {...}
-		for i,obj in lt do lt[i] = b.str(obj) end
-		return b.un(lt)
-	end
-
-	function k.int(...:any):...luaw<number>
-		local lt = {...}
-		for i,v in lt do 
-			if b.tpf(v) == "table" and v.__tonumber then lt[i] = v:__tonumber()
-			else lt[i] = k.l(b.int(v)) end
-		end; return b.up(lt)
-
 	-- k.md, k.mdup, k.multy_duplicate = k.d(3, function(num, ...)
 	-- 	local lt, dlt = {...}, {}
 	-- 	for a=1,num do
@@ -308,7 +319,7 @@ type luaws = luaw<any>
 		end; return b.un(lt)
 	end)
 
-	k.l, k.lw, k.luaw = k.d(3, function<T>(...:T):...luaw<T> -- TODO:if self.i == func then ul(args) 
+	k.l, k.lw, k.luaw = k.d(3, function<T>(...:T):...luaw<T>
 		local lt = {...}::{any}
 		for i,obj in lt do
 			local tp = b.tpf(obj)
@@ -358,10 +369,24 @@ type luaws = luaw<any>
 		end
 	end)
 
-	k.h, k.hash = k.d(2, function(...:any):luaw<string>
+	function k.str(...:any):...str
+		local lt = {...}
+		for i,obj in lt do lt[i] = k.l(b.str(obj)) end
+		return b.un(lt)
+	end
+
+	function k.int(...:any):...int
+		local lt = {...}
+		for i,v in lt do 
+			if b.tpf(v) == "table" and v.__tonumber then lt[i] = v:__tonumber() -- TODO: make custom mms
+			else lt[i] = k.l(b.int(v)) end
+		end; return b.un(lt)
+	end
+
+	k.h, k.hash = k.d(2, function(...:any):str
 		local lt, r = {...}, ""
 		for i,data in lt do
-			r = b.hash_(r .. k.ul(b.str(data)), "md5")
+			r = b.hash_(r .. k.ul(k.str(data)), "md5")
 		end; return k.l(r)
 	end)
 
@@ -406,14 +431,14 @@ type luaws = luaw<any>
 
 	n.chat, n.cht, n.ct = k.d(3, function(msg:any)
 		if ro.cs.ChatVersion == Enum.ChatVersion.TextChatService then
-			ro.cs.TextChannels.RBXGeneral:SendAsync(k.ul(b.str(msg))) -- NOTE: ignore error
+			ro.cs.TextChannels.RBXGeneral:SendAsync(k.ul(k.str(msg)))
 		elseif ro.saymsg then
-			ro.saymsg:FireServer(k.ul(b.str(msg)), "All")
+			ro.saymsg:FireServer(k.ul(k.str(msg)), "All")
 		end
 	end)
 
 	n.system_chat, n.schat, n.sc = k.d(3, function(msg:any)
-		ro.p:Chat(k.ul(b.str(msg)))
+		ro.p:Chat(k.ul(k.str(msg)))
 	end)
 
 	n.bypass_chat, n.bchat, n.bc = k.d(3, function(msg:any, num:any, length:any)
@@ -435,7 +460,7 @@ type luaws = luaw<any>
 	-- 	o.vim:SendMouseButtonEvent(o.m.X, o.m.Y, 0, false, game, 0)
 	-- end)
 
-	n.ifo, n.if_or = k.d(2, function(b, v1, v2)
+	n.ifo, n.if_or = k.d(2, function(b:any, v1:any, v2:any):any
 		if not(v2) then return b or v1
 		else return (b and v1) or v2 end
 	end)
@@ -443,19 +468,19 @@ type luaws = luaw<any>
 -- func_props
 	-- universal
 		local lt:{[string]:{props: {[string]: any}, func:(...any)->...any}} = {}
-		lt._age = {props={}, func=function(self) return tick() - self._created end}
+		lt._age = {props={}, func=function(self:luaws) return tick() - self._created end}
 		for tp,slt in fp do for name,data in lt do fp[tp][name] = data end end
 
 -- wraps_mods
 	-- universal
 		local lt:{{props: {[string]: any}, binds: {meta_methods}, start_or_end: boolean, overwrite: boolean, func: (...any)->...any}} = {}
-		lt[#lt+1] = {props={_last_interaction=0}, binds=amt, start_or_end=true, overwrite=false, func=function(self,...) self._last_interaction = tick(); return self,... end}
+		lt[#lt+1] = {props={_last_interaction=0}, binds=amt, start_or_end=true, overwrite=false, func=function(self:luaws,...:any):(luaws,...any) self._last_interaction = tick(); return self,... end}
 		for tp,slt in wm do for _,data in lt do wm[tp][#wm[tp]+1] = data end end
 	
 	-- function
 		local tp = "function"
 		local lt, ccq = wm[tp], cq[tp]
-		lt[#lt+1] = {props={_caching = false}, binds={"__call"}, start_or_end=true, overwrite=true, func=function(self,...) 
+		lt[#lt+1] = {props={_caching = false}, binds={"__call"}, start_or_end=true, overwrite=true, func=function(self:luaws,...:any):...any 
 			local sig = k.h(...)
 			local r = self._cache.__call[sig]
 			if r then return b.un(r)
@@ -474,7 +499,7 @@ type luaws = luaw<any>
 	-- string
 		local tp = "string"
 		local lt, ccq = m[tp], cq[tp]
-		function lt:run(...:any):...any
+		function lt:run(self:str,...:any):...any
 			local h, c = k.h(self), self._cache["run"]
 			local func = c[h]
 			if func then return func(...)
@@ -490,16 +515,21 @@ type luaws = luaw<any>
 	-- number
 		local tp = "number"
 		local lt, cq = m[tp], cq[tp]
-		function lt:i(mx, mn) mn = (mn or 0); return mx >= self and self >= mn end
+		function lt:r(mx:any, mn:any):boolean 
+			local nn = self[1]
+			mx, mn = k.int(mx)[1], k.int(mn)[1]
+			mn = (mn or 0)
+			return mx >= nn and nn >= mn 
+		end
 
 	-- function
-		local tp = "function"
-		local lt, cq = m[tp], cq[tp]
+		-- local tp = "function"
+		-- local lt, cq = m[tp], cq[tp]
 
 -- operators
 	-- universal
 		local lt = {}
-		lt.__index = function(self,i)
+		lt.__index = function(self:luaws,i:any):any
 			local tp = self._type
 			local p, m = fp[tp][i], m[tp][i]
 			if p then return p.func(self,i)
@@ -510,48 +540,53 @@ type luaws = luaw<any>
 				return m
 			end
 		end 
-		lt.__newindex = function(self,i,v) self[1][i] = v end 
-		lt.__call = function(self,w,...) return self[1](((self._method and w[1]) or w),...) end
-		lt.__iter = function(s) return s.next, s._iter, nil end
+		lt.__newindex = function(self:luaws,i:any,v:any) self[1][i] = v end 
+		lt.__call = function(self:luaws,w:luaws,...):...any return self[1](((self._method and w[1]) or w), ((of[self[1]] and k.ul(...)) or ...)) end
+		lt.__iter = function(self:luaws) return b.nxt, self._iter, nil end
 		for _,tp in atp do op[tp] = lt end
 
 	-- string
 		local tp = "string"
 		local lt = op[tp]
-		lt.__unm = function(str) return k.l(b.rvrs(str[1])) end
-		-- lt.__add = function(str1, str2) return str1..str2 end NOTE: why not concat
-		lt.__sub = function(str1, str2)
-			local fstr2 = ""
-			str2 = b.str(str2)
-			for i=1,#str2 do fstr2 = fstr2..`[{b.sub(str2,i)}]` end
-			local r,_ = b.gsub(str1[1], k.ul(str2), "")
-			return r
+		lt.__unm = function(self:str):str return k.l(b.rvrs(self[1])) end
+		lt.__add = function(str1, str2) return str1..str2 end -- NOTE: why not concat
+		lt.__sub = function(self:str, str_arg:any):str
+			local fstr = ""
+			str_arg = k.ul(k.str(str_arg))
+			for i=1,#str_arg do fstr = fstr..`[{b.sub(str_arg,i)}]` end
+			local r,_ = b.gsub(self[1], str_arg, "")
+			return k.l(r)
 		end
-		lt.__mul = function(str, num:number):string return k.l(b.rep(str[1], k.ul(num))) end
-		lt.__pow = function(str, num:number):string return k.l(b.rep(str[1], k.ul(num) ^ k.ul(#str))) end
-		lt.__div = function(str1, str2):number
-			local nstr2 = {}
-			str2 = k.ul(b.str(str2))
-			for i=1,#str2 do nstr2[#nstr2+1] = `[{str2[i]}]` end
-			local _,num = b.gsub(str1[1], b.concat(nstr2))
+		lt.__mul = function(self:str, num:any):str return k.l(b.rep(self[1], k.ul(k.int(num)))) end
+		lt.__pow = function(self:str, num:any):self return k.l(b.rep(self[1], k.ul(k.int(num)) ^ k.ul(#self))) end
+		lt.__div = function(self:str, str_arg:any):int
+			local nstr = {}
+			str_arg = k.ul(k.str(str_arg))
+			for i=1,#str_arg do nstr[#nstr+1] = `[{str_arg[i]}]` end
+			local _,num = b.gsub(self[1], b.tcnc(nstr), "")
 			return k.l(num)
 		end
-		lt.__concat = function(str1, str2):string return k.l(str1[1]..k.ul(b.str(str2))) end
-		lt.__eq = function(str1, str2):boolean return k.l(k.ul(#str1) == k.ul(b.str(str2))) end
-		lt.__lt = function(str1, str2):boolean return k.l(k.ul(#str1) < k.ul(b.str(str2))) end
-		lt.__le = function(str1, str2):boolean return k.l(k.ul(#str1) <= k.ul(b.str(str2))) end
-		lt.__len = function(str):number return k.l(#str[1]) end
+		lt.__concat = function(self:str, str_arg:any):str return k.l(self[1]..k.ul(k.str(str_arg))) end
+		lt.__eq = function(self:str, str_arg:any):boolean return self[1] == k.ul(k.str(str_arg)) end
+		lt.__lt = function(self:str, str_arg:any):boolean return self[1] < k.ul(k.str(str_arg)) end
+		lt.__le = function(self:str, str_arg:any):boolean return self[1] <= k.ul(k.str(str_arg)) end
+		lt.__len = function(self:str):int return k.l(#self[1]) end
 		
 	-- function
 		local tp = "function"
 		local lt = op[tp]
-		lt.__unm = function(func) return function(...) return b.pcl(func[1],...) end end
+		lt.__unm = function(self) return k.l(function(...) return b.pcl(self[1],...) end) end
 
 	-- table 
 		local tp = "table"
 		local lt = op[tp]
-		local asd = function(lt:{{any}}):{{}} local r = {}; for i,v in lt[1] do r[v] = i end; return k.l(r) end
-		lt.__add = function(lt1, lt2) for i,v in lt2 do if typeof(i) == "number" then lt1:i(LuaV(v)) else lt1[i] = LuaV(v) end end return lt1 end
+		lt.__add = function(self:lt, lt_arg:any) 
+			for i,v in lt_arg do 
+				if typeof(i) == "number" then self:i(LuaV(v)) 
+				else self[i] = LuaV(v) 
+				end 
+			end; return self 
+		end
 		lt.__sub = function(lt1, lt2) for i,v in lt2 do local fi = lt1:fi(v); if fi ~= 0 then lt1[fi] = nil end end; return lt1 end
 		lt.__mul = function(lt, num) local flt = LuaV({}); for a=1,num do flt = flt + lt end; return flt end
 		lt.__pow = function(lt, num) for a=1, num do lt = lt + lt end; return lt end
