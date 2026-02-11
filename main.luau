@@ -20,11 +20,11 @@ type luaws = luaw<any>
 
 type str = luaw<string>
 type int = luaw<number>
-type lt = luaw<{[any]: any}>
-type func = luaw<<a...,r...>(a...)->r...>
-type inst = luaw<Instance>
-type v3 = luaw<Vector3>
-type cf = luaw<CFrame>
+type lts = luaw<{[any]: any}>
+type bin = luaw<<a...,r...>(a...)->r...>
+type ins = luaw<Instance>
+type vec3 = luaw<Vector3>
+type vec12 = luaw<CFrame>
 
 
 --init env
@@ -104,48 +104,48 @@ type cf = luaw<CFrame>
 		}
 	}
 
-	local f = __luaw__.funcs
-		local k = f.kernel
-		local n = f.normal
-		local b = f.backups
-		local of = f.orig
-		local f = nil
+		local f = __luaw__.funcs
+			local k = f.kernel
+			local n = f.normal
+			local b = f.backups
+			local of = f.orig
+			local f = nil
 
-	local o = __luaw__.objects
-		local ro = o.roblox
-		local lo = o.luaw
-		local o = nil
+		local o = __luaw__.objects
+			local ro = o.roblox
+			local lo = o.luaw
+			local o = nil
+			
+		local ts = __luaw__.type_sysyem
+			local rw = ts.raw
+				local dp = rw.default_props
+				local fp = rw.func_props
+				local wm = rw.wraps_mods
+				local m = rw.methods
+				local op = rw.operators
+
+			local cd = ts.compiled
+				local ws = cd.wraps
+				local mt = cd.meta
+
+			local tshp = ts.help
+				local cq = tshp.cache_reqs
+				local its = tshp.iters
+
+			-- FIX: rng text
+			-- local txt = d.text
+			-- 	local ltt = txt.letters
+			-- 	local nms = txt.numbers
+			-- 	local sbl = txt.symbols
+			-- 	local vdc = txt.valid_combo
+			-- 	local ltls = {l=ltt, n=nms, s=sbl}
 		
-	local ts = __luaw__.type_system
-		local rw = ts.raw
-			local dp = rw.default_props
-			local fp = rw.func_props
-			local wm = rw.wraps_mods
-			local m = rw.methods
-			local op = rw.operators
+		local hp = __luaw__.help
+			local amt = hp.all_meta
+			local atp = hp.all_types
+			local hp = nil
 
-		local cd = ts.compiled
-			local ws = cd.wraps
-			local mt = cd.meta
-
-		local tshp = ts.help
-			local cq = tshp.cache_reqs
-			local its = tshp.iters
-
-		-- FIX: rng text
-		-- local txt = d.text
-		-- 	local ltt = txt.letters
-		-- 	local nms = txt.numbers
-		-- 	local sbl = txt.symbols
-		-- 	local vdc = txt.valid_combo
-		-- 	local ltls = {l=ltt, n=nms, s=sbl}
-	
-	local hp = __luaw__.help
-		local amt = hp.all_meta
-		local atp = hp.all_types
-		local hp = nil
-
-	local cfg = __luaw__.config
+		local cfg = __luaw__.config
 
 --fast env set
 	amt = {"__index", "__newindex", "__call", "__add", "__sub", "__mul",
@@ -306,8 +306,8 @@ type cf = luaw<CFrame>
 	-- 	end; return s.unpack(dlt)
 	-- end)
 
-	k.il, k.islw, k.isluaw = k.d(3, function(obj:any):string|boolean
-		return b.tpf(obj) == "table" and (obj::luaws)._type 
+	k.il, k.islw, k.isluaw = k.d(3, function(obj:any):string|false
+		return (b.tpf(obj) == "table" and (obj::luaws)._type) or false 
 	end)
 
 	k.ul, k.unlw, k.unluaw = k.d(3, function(...:any):...any
@@ -375,20 +375,29 @@ type cf = luaw<CFrame>
 		return b.un(lt)
 	end
 
-	function k.int(...:any):...int
-		local lt = {...}
-		for i,v in lt do 
-			if b.tpf(v) == "table" and v.__tonumber then lt[i] = v:__tonumber() -- TODO: make custom mms
-			else lt[i] = k.l(b.int(v)) end
-		end; return b.un(lt)
-	end
-
 	k.h, k.hash = k.d(2, function(...:any):str
 		local lt, r = {...}, ""
 		for i,data in lt do
 			r = b.hash_(r .. k.ul(k.str(data)), "md5")
 		end; return k.l(r)
 	end)
+
+	-- to any
+		function k.int(...:any):...int
+			local lt = {...}
+			for i,v in lt do 
+				if k.il(v) then lt[i] = v:__tonumber()
+				else lt[i] = k.l(b.int(v)) end
+			end; return b.un(lt)
+		end
+
+		function k.lst(...:any):...lst
+			local lt = {...}
+			for i,v in lt do 
+				if k.il(v) then lt[i] = v:__totable()
+				else lt[i] = k.l(b.int(v)) end
+			end; return b.un(lt)
+		end
 
 --normal
 	local o_r_Heartbeat, o_r_RenderStepped = ro.r.Heartbeat, ro.r.RenderStepped
@@ -399,12 +408,12 @@ type cf = luaw<CFrame>
 		else local t, tt = tick(), 0
 			while tick() < t+num do
 				tt = tt + event:Wait()
-			end; return tt
+			end; return k.l(tt)
 		end
 	end]]
 
-	n.qw, n.qwait, n.quick_wait = k.dup(3, b.exec(`{ft1}o_r_Heartbeat{ft2}`)::(num:number?)->()) 
-	n.pw, n.pwait, n.physic_wait = k.dup(3, b.exec(`{ft1}o_r_RenderStepped{ft2}`)::(num:number?)->())
+	n.qw, n.qwait, n.quick_wait = k.dup(3, b.exec(`{ft1}o_r_Heartbeat{ft2}`)::(num:number?)->(int)) 
+	n.pw, n.pwait, n.physic_wait = k.dup(3, b.exec(`{ft1}o_r_RenderStepped{ft2}`)::(num:number?)->(int))
 	n.tw, n.twait, n.task_wait = k.dup(3, task.wait)
 
 	-- n.random_text, n.rtext, n.rt = k.dup(3, function(length, input)
@@ -442,8 +451,8 @@ type cf = luaw<CFrame>
 	end)
 
 	n.bypass_chat, n.bchat, n.bc = k.d(3, function(msg:any, num:any, length:any)
-		num, length = k.l(k.int(num, length))
-		local can = k.l(b.rep("can ", num or 10))
+		num, length = k.ul(k.int(num, length))
+		local can = b.rep("can ", num or 10)
 		if msg == "" then n.schat(can)
 		else
 			for a=1,num or (#msg/10)+1 do
@@ -549,7 +558,7 @@ type cf = luaw<CFrame>
 		local tp = "string"
 		local lt = op[tp]
 		lt.__unm = function(self:str):str return k.l(b.rvrs(self[1])) end
-		lt.__add = function(str1, str2) return str1..str2 end -- NOTE: why not concat
+		-- lt.__add = function(str1, str2) return str1..str2 end -- TODO: pls give me idea
 		lt.__sub = function(self:str, str_arg:any):str
 			local fstr = ""
 			str_arg = k.ul(k.str(str_arg))
