@@ -1,10 +1,17 @@
 --!strict
 --!optimize 2
-type types_str = "string"|"number"|"function"|"Instance"|"Vector3"|"CFrame"|"table"
+
+type alt_<obj> = {[any]:obj}
+type slt_<obj> = {[string]:obj}
+
+type alt = alt_<any>
+type slt = slt_<any>
+
+type types_str = "string"|"number"|"function"|"Instance"|"Vector3"|"CFrame"|"table"|"GInstance"
+
 type meta_methods = "__index"|"__newindex"|"__call"|"__add"|"__sub"|"__mul"|
 	"__div"|"__mod"|"__pow"|"__unm"|"__eq"|"__lt"|"__le"|"__concat"|
 	"__tostring"|"__len"| "__iter"
-
 
 type types_lt<obj> = {["string"]: obj}&{["number"]: obj}&{["function"]: obj}&
 	{["Instance"]: obj}&{["Vector3"]: obj}&{["CFrame"]: obj}&{["table"]: obj}
@@ -13,31 +20,6 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 	{__add: obj}&{__sub: obj}&{__mul: obj}&{__div: obj}&{__mod: obj}&
 	{__pow: obj}&{__unm: obj}&{__eq: obj}&{__lt: obj}&{__le: obj}&
 	{__concat: obj}&{__tostring: obj}&{__len: obj}&{__iter: obj}
-
--- NOTE: if cfg.log == false
--- type luaw<t> = {_selt:t, _type:types_str, _method:boolean, _created:number, _last_interaction:number, _cache:{[string]: {[any]: any}}, _iter_lt: {[any]: any}}
--- 	type luaws = luaw<any>
--- 	type str = luaw<string>
--- 	type int = luaw<number>
--- 	type lts = luaw<{[any]: any}>
--- 	type bin = luaw<<a...,r...>(a...)->r...>
--- 	type ins = luaw<Instance>
--- 	type vec3 = luaw<Vector3>
--- 	type vec12 = luaw<CFrame>
-
--- NOTE: if cfg.log == true
-type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, _last_interaction: number, _cache: {[string]: {[any]: any}}, _iter_lt: {[any]: any},
-	_index: number, _newindex: number, _call: number, _add: number, _sub: number,
-	_mul: number, _div: number, _mod: number, _pow: number, _unm: number, _eq:number, 
-	_lt: number, _le: number, _concat: number, _tostring: number, _len:number, _iter: number}
-	type luaws = luaw<any>
-	type str = luaw<string>
-	type int = luaw<number>
-	type lts = luaw<{[any]: any}>
-	type bin = luaw<<a...,r...>(a...)->r...>
-	type ins = luaw<Instance>
-	type vec3 = luaw<Vector3>
-	type vec12 = luaw<CFrame>
 
 --init env
 	local __luaw__ = {
@@ -77,7 +59,8 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 			log = true,
 			warn = true
 		}
-	}::{
+	}
+	::{
 		help: {
 			all_meta: {meta_methods},
 			all_types: {types_str}
@@ -97,7 +80,7 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 			},
 			compiled: {
 				wraps: types_lt<{[string|number]: any}>,
-				meta: types_lt<meta_methods_lt<(luaws, ...any)->...any>>
+				meta: types_lt<meta_methods_lt<(luaw, ...any)->...any>>
 			}
 		},
 		funcs: {
@@ -206,7 +189,7 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 	end
 
 -- port&save | port_save("____", "____")
-	-- NOTE: ONLY FOR EDIT: idk how to add correct annotation to port_save
+	-- HACK: ONLY FOR EDIT: idk how to add correct annotation to port_save
 		b.str = tostring
 		b.int = tonumber
 		b.exec = loadstring
@@ -225,6 +208,8 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 		b.round = math.round
 		b.rint = math.random
 		b.hash_ = crypt.hash
+		b.ifex = Instance.fromExisting
+		b.err = error
 
 	port_save("str", "tostring")
 	port_save("int", "tonumber")
@@ -244,6 +229,7 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 	port_save("round", "math", "round")
 	port_save("rint", "math", "random")
 	port_save("hash_", "crypt", "hash")
+	port_save("ifex", "Instance", "fromExisting")
 
 --objects
 	-- luaw
@@ -291,6 +277,8 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 			end
 
 --kernel	
+	-- TODO: need to make split api to kernel and custom for safe framework funcs if user wants remake core funcs	
+
 	function k.duplicate<t>(num:number, obj:t):...t
 		local lt = {}
 		for a=1,num do lt[a] = obj end
@@ -299,7 +287,7 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 
 	k.tp, k.type = k.d(2, function(obj:any):string
 		local tp = b.tpf(obj)
-		return (tp == "table" and (obj::luaws)._type) or tp
+		return (tp == "table" and (obj::luaw)._type) or tp
 	end)
 	
 	-- k.md, k.mdup, k.multy_duplicate = k.d(3, function(num, ...)
@@ -311,20 +299,20 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 	-- 	end; return s.unpack(dlt)
 	-- end)
 
-	k.il, k.islw, k.isluaw = k.d(3, function(obj:any):string|false
-		return (b.tpf(obj) == "table" and (obj::luaws)._type) or false 
+	k.il, k.islw, k.isluaw = k.d(3, function(obj:any):any|false
+		return (b.tpf(obj) == "table" and (obj::luaw)._self) or false 
 	end)
 
 	k.ul, k.unlw, k.unluaw = k.d(3, function(...:any):...any
 		local lt = {...}
 		for i,obj in lt do
 			if k.il(obj) then
-				lt[i] = (obj::luaws)._self
+				lt[i] = (obj::luaw)._self
 			end
 		end; return b.un(lt)
 	end)
 
-	k.l, k.lw, k.luaw = k.d(3, function<T>(...:T):...luaw<T>
+	k.l, k.lw, k.luaw = k.d(3, function<T>(...:T):...luaw_<T>
 		local lt = {...}::{any}
 		for i,obj in lt do
 			local tp = b.tpf(obj)
@@ -367,7 +355,7 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 				for meta,func in lt do
 					local v:string = b.sub(meta, 2,-1)
 					ws[tp][v] = 0
-					lt[meta] = function(self:luaws,...) (self::any)[v] += 1; return func(b,...) end
+					lt[meta] = function(self:luaw,...) (self::any)[v] += 1; return func(b,...) end
 				end
 			end
 			mt[tp] = lt
@@ -480,30 +468,31 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 	end)
 
 --help
-	function hf.parg(arg:any):(obj:Instance)->boolean
-		local tp = k.tp(arg)
+	function hf.pcheck(cond:any):(obj:Instance)->boolean
+		if cond == nil then return function() return true end end
+		local tp = k.tp(cond)
 		if tp == "string" then
 			if tp:sub(1,1) == "#" or tp:sub(2,2) == "#" then
 				if tp:sub(1,1) == "!" then
-					arg = arg:sub(3)
-					return function(obj:Instance):boolean return not(obj:IsA(arg)) end
+					cond = cond:sub(3)
+					return function(obj:Instance):boolean return not(obj:IsA(cond)) end
 				else
-					arg = arg:sub(2)
-					return function(obj:Instance):boolean return obj:IsA(arg) end
+					cond = cond:sub(2)
+					return function(obj:Instance):boolean return obj:IsA(cond) end
 				end
 			else
 				if tp:sub(1,1) == "!" then
-					arg = arg:sub(2)
-					return function(obj:Instance):boolean return obj.Name == arg end
+					cond = cond:sub(2)
+					return function(obj:Instance):boolean return obj.Name == cond end
 				else
-					return function(obj:Instance):boolean return obj.Name == arg end
+					return function(obj:Instance):boolean return obj.Name == cond end
 				end
 			end
 		elseif tp == "table" then
-			local vtp = k.tp(arg[1])
+			local vtp = k.tp(cond[1])
 			if vtp == "table" then
 				return function(obj:Instance):boolean 
-					for _,props in arg do
+					for _,props in cond do
 						for prop,v in props do
 							if not(obj[prop] == v) then -- BUG: this must be warning
 								return false
@@ -513,7 +502,7 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 				end
 			elseif vtp == "string" then
 				local ifs = {}
-				for i,arg in arg do ifs[i] = hf.parg(arg) end
+				for i,cond in cond do ifs[i] = hf.pcheck(k.ul(cond)) end
 				return function(obj:Instance):boolean
 					for _,if_ in ifs do
 						if not(if_(obj)) then
@@ -522,25 +511,25 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 					end; return true
 				end
 			end
-		end; return hf.parg(k.str(arg))::(obj:Instance)->boolean
+		end; return hf.pcheck(k.str(cond))::(obj:Instance)->boolean
 	end
 
 -- func_props
 	-- universal
 		local lt = {}
-		lt._age = {props={}, func=function(self:luaws) return tick() - self._created end}
+		lt._age = {props={}, func=function(self:luaw) return tick() - self._created end}
 		for tp,slt in fp::{any} do for name,data in lt do fp[tp][name] = data end end
 
 -- wraps_mods
 	-- universal
 		local lt = {}
-		lt[#lt+1] = {props={_last_interaction=0}, binds=amt, start_or_end=true, overwrite=false, func=function(self:luaws,...:any):(luaws,...any) self._last_interaction = tick(); return self,... end}
+		lt[#lt+1] = {props={_last_interaction=0}, binds=amt, start_or_end=true, overwrite=false, func=function(self:luaw,...:any):(luaw,...any) self._last_interaction = tick(); return self,... end}
 		for tp,slt in wm::{any} do for _,data in lt do wm[tp][#wm[tp]+1] = data end end
 
 	-- function
 		local tp = "function"
 		local lt, ccq = wm[tp], cq[tp]
-		lt[#lt+1] = {props={_caching = false}, binds={"__call"}, start_or_end=true, overwrite=true, func=function(self:luaws,...:any):...any 
+		lt[#lt+1] = {props={_caching = false}, binds={"__call"}, start_or_end=true, overwrite=true, func=function(self:luaw,...:any):...any 
 			local sig = k.h(...)
 			local r = self._cache.__call[sig]
 			if r then return b.un(r)
@@ -589,7 +578,7 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 -- operators
 	-- universal
 		local lt = {}
-		lt.__index = function(self:luaws,i:any):any
+		lt.__index = function(self:luaw,i:any):any
 			local tp = self._type
 			local p, m = fp[tp][i], m[tp][i]
 			if p then return p.func(self,i)
@@ -600,9 +589,9 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 				return m
 			end
 		end 
-		lt.__newindex = function(self:luaws,i:any,v:any) self._self[i] = k.ul(v) end 
-		lt.__call = function(self:luaws,w:luaws,...):...any return self._self(((self._method and w._self) or w), ((of[self._self] and k.ul(...)) or ...)) end
-		lt.__iter = function(self:luaws) return b.nxt, self._iter, nil end
+		lt.__newindex = function(self:luaw,i:any,v:any) self._self[i] = k.ul(v) end 
+		lt.__call = function(self:luaw,w:luaw,...):...any return self._self(((self._method and w._self) or w), ((of[self._self] and k.ul(...)) or ...)) end
+		lt.__iter = function(self:luaw) return b.nxt, self._iter, nil end
 		for _,tp in atp do op[tp] = lt end
 
 	-- string
@@ -651,7 +640,7 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 			end; return self 
 		end
 		lt.__sub = function(self:lts, lt_arg:any):lts for i,_ in lt_arg do self[i] = nil end; return self end
-		lt.__mul = function(self:lts, int_arg:any):lts
+		lt.__mul = function(self:lts, int_arg:int|number|any):lts
 			local lipairs = 0
 			for i,_ in ipairs(self._iter_lt) do lipairs = i end
 			for a=0, k.int(int_arg)._self do
@@ -663,7 +652,7 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 				end
 			end; return self
 		end
-		lt.__pow = function(self:lts, int_arg:any):lts
+		lt.__pow = function(self:lts, int_arg:int|number|any):lts
 			local lipairs = 0
 			for i,_ in ipairs(self._iter_lt) do lipairs = i end
 			for a=1, #self._self ^ k.int(int_arg)._self do
@@ -679,19 +668,125 @@ type luaw<t> = { _self: t, _type: types_str, _method: boolean, _created:number, 
 		lt.__idiv = function(self:lts, obj:any):int local r = 0; for i,_ in self do if i == obj then r += 1 end end; return k.l(r) end
 		lt.__mod = function(self:lts, obj:any):int local r = 0; for i,v in self do if i == obj or v == obj then r += 1 end end; return k.l(r) end
 
-	-- Instance
+	-- TODO: Instance
+		-- (int?) на ins получение потомков 
+			-- -1 потомки  
+			-- 0 self
+			-- 1 дети
+			-- 2+ дети детей
+			-- всё это gins
+				-- функциональная группа ins 
+				-- она должна дублировать поведение на всех ins в её списке
+				-- () выход в lts
+				-- если без аргов + self == gins то тогда это выход
+		-- + меняет родителя 2 на self 
+		-- - удаляет детей по умному аргументу
+		-- * копирует по УА через :clone
+		-- / вырезает по УА через Parent = nil
+		-- ^ копирует по УА через Instance.fromExisting
+		-- // разгрупировывает + вырезает по УА 
+		-- & ищет по УА
+		-- -ins разгрупировывает ins перемещяя его потомков в self.parent и сносит self через Destroy
+		-- ins + ins 2 в 1
+		-- ins + gins/gins + ins все gins в ins
+		-- gins + gins сложение списков
+
 		local tp = "Instance"
 		local lt = op[tp]
-		lt.__len = function(self) return #self._self:GetChildren() end
-		lt.__add = function(self:ins, obj:ins|Instance) (obj::Instance).Parent = self._self; return self end
-		lt.__sub = function(self:ins, arg:any):luaw<{str}>
-			local if_,r = hf.parg(arg),{}
-			for _,obj in self._self:GetChildren() do 
-				if if_(obj) then 
-					r[#r+1] = k.l(obj.Name)
+		lt.__call = function(self:ins, int_arg:int|number|any, cond:any):gins
+			local if_,r = hf.pcheck(k.ul(cond)),{self}
+			int_arg = (int_arg and k.int(int_arg)._self) or 1
+			for a=0, int_arg::number do
+				local tr = r; r = {}
+				for _,parent in tr do
+					for _,obj in parent do
+						if if_(k.ul(obj)) then 
+							r[#r+1] = obj
+						end
+					end
+				end
+			end; r._type = "GInstance"
+			return k.l(r)
+		end
+		lt.__len = function(self:ins) return #self._self:GetChildren() end -- TODO: comb with iter and cache
+		lt.__add = function(self:ins, ins_arg:ins|Instance|any):ins?
+			if b.tpf(ins_arg) == "Instance" then (ins_arg::Instance).Parent = self._self; return self
+			else return b.err(`ins.__add: {ins_arg} is not a Instance/ins`) end
+		end
+		lt.__sub = function(self:ins, cond:any):luaw_<{str}>
+			local if_,r = hf.pcheck(k.ul(cond)),{}
+			for _,obj in self do 
+				if if_(k.ul(obj)) then 
+					r[#r+1] = obj.Name
 					obj:Destroy()
 				end
 			end; return k.l(r)
 		end
-		lt.__mul = function(self:ins, obj) end -- TODO: copy childs
-		lt.__div = function(self:ins, obj) end -- TODO: copy desedants
+		lt.__mul = function(self:ins, cond:any):gins
+			local if_,r = hf.pcheck(k.ul(cond)),{}
+			for _,obj in self do 
+				if if_(k.ul(obj)) then 
+					r[#r+1] = obj:Clone()
+				end
+			end; r._type = "GInstance"
+			return k.l(r)
+		end
+		lt.__pow = function(self:ins, cond:any):gins
+			local if_,r = hf.pcheck(k.ul(cond)),{}
+			for _,obj in self do 
+				if if_(k.ul(obj)) then 
+					r[#r+1] = k.l(b.ifex(obj))
+				end
+			end; r._type = "GInstance"
+			return k.l(r)
+		end
+		lt.__div = function(self:ins, cond:any):gins
+			local if_,r = hf.pcheck(k.ul(cond)),{}
+			for _,obj in self do 
+				if if_(k.ul(obj)) then 
+					obj.Parent = nil
+					r[#r+1] = obj
+				end
+			end; r._type = "GInstance"
+			return k.l(r)
+		end
+		lt.__idiv = function(self:ins, cond:any):gins
+			local if_,r = hf.pcheck(k.ul(cond)),{}
+			for _,obj in self do 
+				if if_(k.ul(obj)) then 
+					local parent = obj.Parent
+					for _,child in obj do child.Parent = parent end
+					obj.Parent = nil
+					r[#r+1] = obj
+				end
+			end; r._type = "GInstance"
+			return k.l(r)
+		end
+		lt.__mod = function(self:ins, cond:any):gins
+			local if_,r = hf.pcheck(k.ul(cond)),{}
+			for _,obj in self._self:GetChildren() do 
+				if if_(k.ul(obj)) then 
+					r[#r+1] = obj
+				end
+			end; r._type = "GInstance"
+			return k.l(r)
+		end
+		lt.__eq = function(self:ins, ins_arg:ins|Instance|any):boolean?
+			if b.tpf(ins_arg) == "Instance" then
+				if k.il(ins_arg) then return self._self == (ins_arg::ins)._self
+				else return self._self == (ins_arg::Instance) end
+			else return b.err(`ins.__eq: {ins_arg} is not a Instance/ins`) end
+		end
+		lt.__lt = function(self:ins, ins_arg:ins|Instance|any):boolean?
+			if b.tpf(ins_arg) == "Instance" then
+				if k.il(ins_arg) then return #self._self:GetChildren() < #(ins_arg::ins)._self:GetChildren()
+				else return #self._self:GetChildren() < #(ins_arg::Instance):GetChildren() end
+			else return b.err(`ins.__lt: {ins_arg} is not a Instance/ins`) end
+		end
+		lt.__le = function(self:ins, ins_arg:ins|Instance|any):boolean?
+			if b.tpf(ins_arg) == "Instance" then
+				if k.il(ins_arg) then return self._self == (ins_arg::ins)._self or #self._self:GetChildren() < #(ins_arg::ins)._self:GetChildren()
+				else return self._self == (ins_arg::Instance) or #self._self:GetChildren() < #(ins_arg::Instance):GetChildren() end
+			else return b.err(`ins.__le: {ins_arg} is not a Instance/ins`) end
+		end
+
