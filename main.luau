@@ -107,8 +107,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 
 		local o = __luaw__.objects
 			local ro = o.roblox
-			local lo = o.luaw
-			local o = nil
+			-- local lo = o.luaw
 			
 		local ts = __luaw__.type_system
 			local rw = ts.raw
@@ -138,7 +137,6 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 		local hp = __luaw__.help
 			local amt = hp.all_meta
 			local atp = hp.all_types
-			local hp = nil
 
 		local cfg = __luaw__.config
 
@@ -153,7 +151,6 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 	for i,_ in rw do rw[i] = table.clone(atp_lt) end
 	for i,_ in cd do cd[i] = table.clone(atp_lt) end
 	for i,_ in tshp do tshp[i] = table.clone(atp_lt) end
-	local atp_lt = nil
 
 	dp["Instance"]["_method"] = false
 
@@ -167,7 +164,6 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			end
 		end
 	end; collect_orig(getgenv())
-	local collect_orig = nil
 
 	-- FIX: rng text
 	-- for a=65, 90 do ltt[#ltt+1] = string.char(a) end
@@ -264,7 +260,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			ro["m"] = ro.me:GetMouse()
 			ro["name"] = ro.me.Name
 			ro["dname"] = ro.me.DisplayName
-			o["pg"] = o.me.PlayerGui
+			ro["pg"] = ro.me.PlayerGui
 			ro["muid"] = ro.me.UserId
 			ro["rt"] = ro.p.RespawnTime
 
@@ -393,6 +389,8 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 
 --normal
 	local o_r_Heartbeat, o_r_RenderStepped = ro.r.Heartbeat, ro.r.RenderStepped
+	-- HACK: for bypess warning
+	o_r_Heartbeat, o_r_RenderStepped = o_r_Heartbeat, o_r_RenderStepped
 	local ft1, ft2 = [[return function(num)
 		local event = ]],[[
 		num = k.ul(num)
@@ -515,20 +513,20 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 
 -- func_props
 	-- universal
-		local lt = {}
-		lt._age = {props={}, func=function(self:luaw) return tick() - self._created end}
-		for tp,slt in fp::{any} do for name,data in lt do fp[tp][name] = data end end
+		local fp_u_lt = {}
+		fp_u_lt._age = {props={}, func=function(self:luaw) return tick() - self._created end}
+		for tp,slt in fp::{any} do for name,data in fp_u_lt do fp[tp][name] = data end end
 
 -- wraps_mods
 	-- universal
-		local lt = {}
-		lt[#lt+1] = {props={_last_interaction=0}, binds=amt, start_or_end=true, overwrite=false, func=function(self:luaw,...:any):(luaw,...any) self._last_interaction = tick(); return self,... end}
-		for tp,slt in wm::{any} do for _,data in lt do wm[tp][#wm[tp]+1] = data end end
+		local wm_u_lt = {}
+		wm_u_lt[#wm_u_lt+1] = {props={_last_interaction=0}, binds=amt, start_or_end=true, overwrite=false, func=function(self:luaw,...:any):(luaw,...any) self._last_interaction = tick(); return self,... end}
+		for tp,slt in wm::{any} do for _,data in wm_u_lt do wm[tp][#wm[tp]+1] = data end end
 
 	-- function
-		local tp = "function"
-		local lt, ccq = wm[tp], cq[tp]
-		lt[#lt+1] = {props={_caching = false}, binds={"__call"}, start_or_end=true, overwrite=true, func=function(self:luaw,...:any):...any 
+		local wm_f_tp = "function"
+		local wm_f_lt, wm_f_ccq = wm[wm_f_tp], cq[wm_f_tp]
+		wm_f_lt[#wm_f_lt+1] = {props={_caching = false}, binds={"__call"}, start_or_end=true, overwrite=true, func=function(self:luaw,...:any):...any 
 			local sig = k.h(...)
 			local r = self._cache.__call[sig]
 			if r then return b.un(r)
@@ -537,7 +535,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 				self._cache["__call"][sig] = r
 				return b.un(r)
 			end
-		end}; ccq[#ccq+1] = "__call"
+		end}; wm_f_ccq[#wm_f_ccq+1] = "__call"
 
 -- methods 
 	-- universal
@@ -545,25 +543,25 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 		-- for tp,slt in m do for name,func in lt do m[tp][name] = func end end
 	
 	-- string
-		local tp = "string"
-		local lt, ccq = m[tp], cq[tp]
-		function lt:run(self:str,...:any):...any
+		local m_s_tp = "string"
+		local m_s_lt, m_s_ccq = m[m_s_tp], cq[m_s_tp]
+		function m_s_lt:run(...:any):...any
 			local h, c = k.h(self), self._cache["run"]
 			local func = c[h]
 			if func then return func(...)
 			else
-				local func = b.exec(self)
+				func = b.exec(self)
 				c[h] = func
 				return func(...)
 			end
-		end; ccq[#ccq+1] = "run"
+		end; m_s_ccq[#m_s_ccq+1] = "run"
 
 		-- TODO: fastload
 	
 	-- number
-		local tp = "number"
-		local lt, ccq = m[tp], cq[tp]
-		function lt:r(mx:any, mn:any):boolean 
+		local m_n_tp = "number"
+		local m_n_lt, _m_n_ccq = m[m_n_tp], cq[m_n_tp]
+		function m_n_lt:r(mx:any, mn:any):boolean 
 			local nn = self._self
 			mx, mn = k.ul(k.int(mx, mn))
 			mn = (mn or 0)
@@ -576,59 +574,59 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 
 -- operators
 	-- universal
-		local lt = {}
-		lt.__index = function(self:luaw,i:any):any
+		local op_u_lt = {}
+		op_u_lt.__index = function(self:luaw,i:any):any
 			local tp = self._type
 			local p, m = fp[tp][i], m[tp][i]
 			if p then return p.func(self,i)
 			elseif m then return m
 			else
-				local m = k.l(self._self[i])
+				m = k.l(self._self[i])
 				m._method = true
 				return m
 			end
 		end 
-		lt.__newindex = function(self:luaw,i:any,v:any) self._self[i] = k.ul(v) end 
-		lt.__call = function(self:luaw,w:luaw,...):...any return self._self(((self._method and w._self) or w), ((of[self._self] and k.ul(...)) or ...)) end
-		lt.__iter = function(self:luaw) return b.nxt, self._iter, nil end
-		for _,tp in atp do op[tp] = lt end
+		op_u_lt.__newindex = function(self:luaw,i:any,v:any) self._self[i] = k.ul(v) end 
+		op_u_lt.__call = function(self:luaw,w:luaw,...):...any return self._self(((self._method and w._self) or w), ((of[self._self] and k.ul(...)) or ...)) end
+		op_u_lt.__iter = function(self:luaw) return b.nxt, self._iter, nil end
+		for _,tp in atp do op[tp] = op_u_lt end
 
 	-- string
-		local tp = "string"
-		local lt = op[tp]
-		lt.__unm = function(self:str):str return k.l(b.rvrs(self._self)) end
-		-- lt.__add = function(str1, str2) return str1..str2 end -- TODO: pls give me idea
-		lt.__sub = function(self:str, str_arg:any):str
+		local op_s_tp = "string"
+		local op_s_lt = op[op_s_tp]
+		op_s_lt.__unm = function(self:str):str return k.l(b.rvrs(self._self)) end
+		-- lt.__add = function(str1, str2) return str1..str2 end -- TODO: i need idea
+		op_s_lt.__sub = function(self:str, str_arg:any):str
 			local fstr = ""
 			str_arg = k.ul(k.str(str_arg))
 			for i=1,#str_arg do fstr = fstr..`[{b.sub(str_arg,i)}]` end
 			local r,_ = b.gsub(self._self, str_arg, "")
 			return k.l(r)
 		end
-		lt.__mul = function(self:str, num:any):str return k.l(b.rep(self._self, k.ul(k.int(num)))) end
-		lt.__pow = function(self:str, num:any):str return k.l(b.rep(self._self, k.ul(k.int(num)) ^ k.ul(#self))) end
-		lt.__div = function(self:str, str_arg:any):int
+		op_s_lt.__mul = function(self:str, num:any):str return k.l(b.rep(self._self, k.ul(k.int(num)))) end
+		op_s_lt.__pow = function(self:str, num:any):str return k.l(b.rep(self._self, k.ul(k.int(num)) ^ k.ul(#self))) end
+		op_s_lt.__div = function(self:str, str_arg:any):int
 			local nstr = {}
 			str_arg = k.ul(k.str(str_arg))
 			for i=1,#str_arg do nstr[#nstr+1] = `[{str_arg[i]}]` end
 			local _,num = b.gsub(self._self, b.tcnc(nstr), "")
 			return k.l(num)
 		end
-		lt.__concat = function(self:str, str_arg:any):str return k.l(self._self..k.ul(k.str(str_arg))) end
-		lt.__eq = function(self:str, str_arg:any):boolean return self._self == k.ul(k.str(str_arg)) end
-		lt.__lt = function(self:str, str_arg:any):boolean return self._self < k.ul(k.str(str_arg)) end
-		lt.__le = function(self:str, str_arg:any):boolean return self._self <= k.ul(k.str(str_arg)) end
-		lt.__len = function(self:str):int return k.l(#self._self) end
+		op_s_lt.__concat = function(self:str, str_arg:any):str return k.l(self._self..k.ul(k.str(str_arg))) end
+		op_s_lt.__eq = function(self:str, str_arg:any):boolean return self._self == k.ul(k.str(str_arg)) end
+		op_s_lt.__lt = function(self:str, str_arg:any):boolean return self._self < k.ul(k.str(str_arg)) end
+		op_s_lt.__le = function(self:str, str_arg:any):boolean return self._self <= k.ul(k.str(str_arg)) end
+		op_s_lt.__len = function(self:str):int return k.l(#self._self) end
 		
 	-- function
-		local tp = "function"
-		local lt = op[tp]
-		lt.__unm = function(self:bin):bin return k.l(function(...) return b.pcl(self._self,...) end) end
+		local op_f_tp = "function"
+		local op_f_lt = op[op_f_tp]
+		op_f_lt.__unm = function(self:bin):bin return k.l(function(...) return b.pcl(self._self,...) end) end
 
 	-- table 
-		local tp = "table"
-		local lt, ccq = op[tp], cq[tp]
-		lt.__add = function(self:lts, lt_arg:any):lts
+		local op_t_tp = "table"
+		local op_t_lt, _op_t_ccq = op[op_t_tp], cq[op_t_tp]
+		op_t_lt.__add = function(self:lts, lt_arg:any):lts
 			local lipairs = 0
 			for i,_ in ipairs(self._iter_lt) do lipairs = i end
 			for i,v in k.l(lt_arg) do 
@@ -638,8 +636,8 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 				else self[i] = v end 
 			end; return self 
 		end
-		lt.__sub = function(self:lts, lt_arg:any):lts for i,_ in lt_arg do self[i] = nil end; return self end
-		lt.__mul = function(self:lts, int_arg:int|number|any):lts
+		op_t_lt.__sub = function(self:lts, lt_arg:any):lts for i,_ in lt_arg do self[i] = nil end; return self end
+		op_t_lt.__mul = function(self:lts, int_arg:int|number|any):lts
 			local lipairs = 0
 			for i,_ in ipairs(self._iter_lt) do lipairs = i end
 			for a=0, k.int(int_arg)._self do
@@ -651,7 +649,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 				end
 			end; return self
 		end
-		lt.__pow = function(self:lts, int_arg:int|number|any):lts
+		op_t_lt.__pow = function(self:lts, int_arg:int|number|any):lts
 			local lipairs = 0
 			for i,_ in ipairs(self._iter_lt) do lipairs = i end
 			for a=1, #self._self ^ k.int(int_arg)._self do
@@ -663,9 +661,9 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 				end
 			end; return self
 		end
-		lt.__div = function(self:lts, obj:any):int local r = 0; for _,v in self do if v == obj then r += 1 end end; return k.l(r) end
-		lt.__idiv = function(self:lts, obj:any):int local r = 0; for i,_ in self do if i == obj then r += 1 end end; return k.l(r) end
-		lt.__mod = function(self:lts, obj:any):int local r = 0; for i,v in self do if i == obj or v == obj then r += 1 end end; return k.l(r) end
+		op_t_lt.__div = function(self:lts, obj:any):int local r = 0; for _,v in self do if v == obj then r += 1 end end; return k.l(r) end
+		op_t_lt.__idiv = function(self:lts, obj:any):int local r = 0; for i,_ in self do if i == obj then r += 1 end end; return k.l(r) end
+		op_t_lt.__mod = function(self:lts, obj:any):int local r = 0; for i,v in self do if i == obj or v == obj then r += 1 end end; return k.l(r) end
 
 	-- TODO: Instance
 		-- (int?) на ins получение потомков 
@@ -690,9 +688,9 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 		-- ins + gins/gins + ins все gins в ins
 		-- gins + gins сложение списков
 
-		local tp = "Instance"
-		local lt = op[tp]
-		lt.__call = function(self:ins, int_arg:int|number|any, cond:any):gins
+		local op_i_tp = "Instance"
+		local op_i_lt = op[op_i_tp]
+		op_i_lt.__call = function(self:ins, int_arg:int|number|any, cond:any):gins
 			local if_,r = hf.pcheck(k.ul(cond)),{self}
 			int_arg = (int_arg and k.int(int_arg)._self) or 1
 			for a=0, int_arg::number do
@@ -707,12 +705,12 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			end; r._type = "GInstance"
 			return k.l(r)
 		end
-		lt.__len = function(self:ins) return #self._self:GetChildren() end -- TODO: comb with iter and cache
-		lt.__add = function(self:ins, ins_arg:ins|Instance|any):ins?
+		op_i_lt.__len = function(self:ins) return #self._self:GetChildren() end -- TODO: comb with iter and cache
+		op_i_lt.__add = function(self:ins, ins_arg:ins&Instance):ins?
 			if b.tpf(ins_arg) == "Instance" then (ins_arg::Instance).Parent = self._self; return self
 			else return b.err(`ins.__add: {ins_arg} is not a Instance/ins`) end
 		end
-		lt.__sub = function(self:ins, cond:any):luaw_<{str}>
+		op_i_lt.__sub = function(self:ins, cond:any):luaw_<{str}>
 			local if_,r = hf.pcheck(k.ul(cond)),{}
 			for _,obj in self do 
 				if if_(k.ul(obj)) then 
@@ -721,7 +719,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 				end
 			end; return k.l(r)
 		end
-		lt.__mul = function(self:ins, cond:any):gins
+		op_i_lt.__mul = function(self:ins, cond:any):gins
 			local if_,r = hf.pcheck(k.ul(cond)),{}
 			for _,obj in self do 
 				if if_(k.ul(obj)) then 
@@ -730,7 +728,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			end; r._type = "GInstance"
 			return k.l(r)
 		end
-		lt.__pow = function(self:ins, cond:any):gins
+		op_i_lt.__pow = function(self:ins, cond:any):gins
 			local if_,r = hf.pcheck(k.ul(cond)),{}
 			for _,obj in self do 
 				if if_(k.ul(obj)) then 
@@ -739,7 +737,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			end; r._type = "GInstance"
 			return k.l(r)
 		end
-		lt.__div = function(self:ins, cond:any):gins
+		op_i_lt.__div = function(self:ins, cond:any):gins
 			local if_,r = hf.pcheck(k.ul(cond)),{}
 			for _,obj in self do 
 				if if_(k.ul(obj)) then 
@@ -749,7 +747,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			end; r._type = "GInstance"
 			return k.l(r)
 		end
-		lt.__idiv = function(self:ins, cond:any):gins
+		op_i_lt.__idiv = function(self:ins, cond:any):gins
 			local if_,r = hf.pcheck(k.ul(cond)),{}
 			for _,obj in self do 
 				if if_(k.ul(obj)) then 
@@ -761,7 +759,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			end; r._type = "GInstance"
 			return k.l(r)
 		end
-		lt.__mod = function(self:ins, cond:any):gins
+		op_i_lt.__mod = function(self:ins, cond:any):gins
 			local if_,r = hf.pcheck(k.ul(cond)),{}
 			for _,obj in self._self:GetChildren() do 
 				if if_(k.ul(obj)) then 
@@ -770,22 +768,22 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			end; r._type = "GInstance"
 			return k.l(r)
 		end
-		lt.__eq = function(self:ins, ins_arg:ins|Instance|any):boolean?
+		op_i_lt.__eq = function(self:ins, ins_arg:ins&Instance):boolean?
 			if b.tpf(ins_arg) == "Instance" then
-				if k.il(ins_arg) then return self._self == (ins_arg::ins)._self
+				if k.il(ins_arg) then return self._self == ins_arg._self
 				else return self._self == (ins_arg::Instance) end
 			else return b.err(`ins.__eq: {ins_arg} is not a Instance/ins`) end
 		end
-		lt.__lt = function(self:ins, ins_arg:ins|Instance|any):boolean?
+		op_i_lt.__lt = function(self:ins, ins_arg:ins&Instance):boolean?
 			if b.tpf(ins_arg) == "Instance" then
-				if k.il(ins_arg) then return #self._self:GetChildren() < #(ins_arg::ins)._self:GetChildren()
-				else return #self._self:GetChildren() < #(ins_arg::Instance):GetChildren() end
+				if k.il(ins_arg) then return #self._self:GetChildren() < #ins_arg._self:GetChildren()
+				else return #self._self:GetChildren() < #ins_arg:GetChildren() end
 			else return b.err(`ins.__lt: {ins_arg} is not a Instance/ins`) end
 		end
-		lt.__le = function(self:ins, ins_arg:ins|Instance|any):boolean?
+		op_i_lt.__le = function(self:ins, ins_arg:ins&Instance):boolean?
 			if b.tpf(ins_arg) == "Instance" then
-				if k.il(ins_arg) then return self._self == (ins_arg::ins)._self or #self._self:GetChildren() < #(ins_arg::ins)._self:GetChildren()
-				else return self._self == (ins_arg::Instance) or #self._self:GetChildren() < #(ins_arg::Instance):GetChildren() end
+				if k.il(ins_arg) then return self._self == ins_arg._self or #self._self:GetChildren() < #ins_arg._self:GetChildren()
+				else return self._self == (ins_arg::Instance) or #self._self:GetChildren() < #ins_arg:GetChildren() end
 			else return b.err(`ins.__le: {ins_arg} is not a Instance/ins`) end
 		end
 
