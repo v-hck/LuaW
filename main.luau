@@ -104,7 +104,6 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			local n = f.normal
 			local b = f.backups
 			local of = f.orig
-			local f = nil
 
 		local o = __luaw__.objects
 			local ro = o.roblox
