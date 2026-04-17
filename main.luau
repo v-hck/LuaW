@@ -10,7 +10,7 @@ type slt = slt_<any>
 type types_str = "string"|"number"|"function"|"Instance"|"Vector3"|"CFrame"|"table"|"GInstance"
 
 type meta_methods = "__index"|"__newindex"|"__call"|"__add"|"__sub"|"__mul"|
-	"__div"|"__mod"|"__pow"|"__unm"|"__eq"|"__lt"|"__le"|"__concat"|
+	"__div"|"__idiv"|"__mod"|"__pow"|"__unm"|"__eq"|"__lt"|"__le"|"__concat"|
 	"__tostring"|"__len"| "__iter"
 
 type types_lt<obj> = {["string"]: obj}&{["number"]: obj}&{["function"]: obj}&
@@ -491,7 +491,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 				return function(obj:Instance):boolean 
 					for _,props in cond do
 						for prop,v in props do
-							if not(obj[prop] == v) then -- BUG: this must be warning
+							if not(obj[prop] == v) then -- HACK: this must be warning
 								return false
 							end
 						end
@@ -588,7 +588,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 		end 
 		op_u_lt.__newindex = function(self:luaw,i:any,v:any) self._self[i] = k.ul(v) end 
 		op_u_lt.__call = function(self:luaw,w:luaw,...):...any return self._self(((self._method and w._self) or w), ((of[self._self] and k.ul(...)) or ...)) end
-		op_u_lt.__iter = function(self:luaw) return b.nxt, self._iter, nil end
+		op_u_lt.__iter = function(self:luaw) return b.nxt, self._iter_lt, nil end
 		for _,tp in atp do op[tp] = op_u_lt end
 
 	-- string
@@ -666,24 +666,6 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 		op_t_lt.__mod = function(self:lts, obj:any):int local r = 0; for i,v in self do if i == obj or v == obj then r += 1 end end; return k.l(r) end
 
 	-- TODO: Instance
-		-- (int?) на ins получение потомков 
-			-- -1 потомки  
-			-- 0 self
-			-- 1 дети
-			-- 2+ дети детей
-			-- всё это gins
-				-- функциональная группа ins 
-				-- она должна дублировать поведение на всех ins в её списке
-				-- () выход в lts
-				-- если без аргов + self == gins то тогда это выход
-		-- + меняет родителя 2 на self 
-		-- - удаляет детей по умному аргументу
-		-- * копирует по УА через :clone
-		-- / вырезает по УА через Parent = nil
-		-- ^ копирует по УА через Instance.fromExisting
-		-- // разгрупировывает + вырезает по УА 
-		-- & ищет по УА
-		-- -ins разгрупировывает ins перемещяя его потомков в self.parent и сносит self через Destroy
 		-- ins + ins 2 в 1
 		-- ins + gins/gins + ins все gins в ins
 		-- gins + gins сложение списков
@@ -707,10 +689,11 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 		end
 		op_i_lt.__len = function(self:ins) return #self._self:GetChildren() end -- TODO: comb with iter and cache
 		op_i_lt.__add = function(self:ins, ins_arg:ins&Instance):ins?
-			if b.tpf(ins_arg) == "Instance" then (ins_arg::Instance).Parent = self._self; return self
-			else return b.err(`ins.__add: {ins_arg} is not a Instance/ins`) end
+			local tp = b.tpf(ins_arg)
+			if tp == "Instance" or tp == "GInstance" then (ins_arg::Instance).Parent = self._self; return self
+			else return b.err(`ins.__add: {ins_arg} is not a Instance/ins/gins`) end
 		end
-		op_i_lt.__sub = function(self:ins, cond:any):luaw_<{str}>
+		op_i_lt.__sub = function(self:ins, cond:any):lts_<{str}>
 			local if_,r = hf.pcheck(k.ul(cond)),{}
 			for _,obj in self do 
 				if if_(k.ul(obj)) then 
@@ -786,4 +769,3 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 				else return self._self == (ins_arg::Instance) or #self._self:GetChildren() < #ins_arg:GetChildren() end
 			else return b.err(`ins.__le: {ins_arg} is not a Instance/ins`) end
 		end
-
