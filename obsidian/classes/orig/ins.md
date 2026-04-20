@@ -13,26 +13,25 @@
 ## methods
 - [ ] 
 ### custom meta
-- [ ] \_\_tonumber: 
-- [ ] \_\_totable: 
-- [ ] \_\_tofunction: 
-- [ ] \_\_toinstance: 
-- [ ] \_\_tovector2: 
-- [ ] \_\_tovector3: 
-- [ ] \_\_tocframe: 
+- [ ] \_\_tonumber: id
+- [ ] \_\_totable: все не дефолтные параметры
+- [ ] \_\_tofunction: бинарник на воссоздание копии
+- [ ] \_\_tovector2: .position(x,y)
+- [ ] \_\_tovector3: .position
+- [ ] \_\_tocframe: .cframe
 # meta
 - \_\_index
-- [ ] \_\_newindex: `x.y = z`
+- [ ] \_\_newindex: `x.y:str! = z:ins!` z.Name = y; z.Parent = x
 - [x] \_\_call: `x(y:int?)` получение потомков 
     -1 потомки  
     0 self
     1 дети
     2+ дети детей
-    всё это gins
-        функциональная группа ins 
-        она должна дублировать поведение на всех ins в её списке
-        () выход в lts
-        если без аргов + self == gins то тогда это выход
+    всё это [[gins]]
+        функциональная группа [[ins]] 
+        она должна дублировать поведение на всех [[ins]] в её списке
+        () выход в [[lts]]
+        если без аргов + self == [[gins]] то тогда это выход
 - [ ] \_\_len: `#x`
 - [x] \_\_unm: `-x` разгрупировывает `x` перемещяя его потомков в `x.parent` и сносит `x` через `:Destroy()`
 - [x] \_\_add: `x+y:ins!` `y.parent = x`
@@ -43,8 +42,8 @@
 - [x] \_\_idiv: `x//y:ua!` разгрупировывает + вырезает по [[УА]] 
 - [x] \_\_mod: `x%y:ua!` ищет по [[УА]]
 - [x] \_\_eq: `x==y`
-- [x] \_\_lt: `x<y`
-- [x] \_\_le: `x<=y`
-- [ ] \_\_concat: `x..y`
+- [x] \_\_lt: `x<y` дети
+- [x] \_\_le: `x<=y` дети
+- [ ] \_\_concat: `x..y` конвертация в [[gins]]
 - [x] \_\_iter: `in x`
-- [ ] \_\_tostring: 
+- [ ] \_\_tostring: .Name
