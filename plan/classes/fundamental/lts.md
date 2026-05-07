@@ -39,4 +39,4 @@
 -  \_\_iter: `in x`: 
 - [ ] \_\_tostring: 
 # raw ideas
-- 
+- [ ] 

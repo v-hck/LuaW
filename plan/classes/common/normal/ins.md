@@ -46,4 +46,4 @@
 - \_\_iter: `in x`: 
 - [ ] \_\_tostring: .Name
 # raw ideas
-- 
+- [ ] 

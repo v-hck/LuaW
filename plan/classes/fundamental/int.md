@@ -39,4 +39,4 @@
 - [ ] \_\_iter: `in x`: for a=1,x
 - [ ] \_\_tostring: в строчку
 # raw ideas
-- 
+- [ ] 
