@@ -11,12 +11,7 @@
 ## methods
 - [ ] 
 ### custom meta
-- [ ] \_\_tonumber: id
-- [ ] \_\_totable: все не дефолтные параметры
-- [ ] \_\_tofunction: бинарник на воссоздание копии
-- [ ] \_\_tovector2: .position(x,y)
-- [ ] \_\_tovector3: .position
-- [ ] \_\_tocframe: .cframe
+См. [[metamorphosis#ins ->]]
 # meta
 - \_\_index
 - [ ] \_\_newindex: `x.y:str! = z:ins!`: z.Name = y; z.Parent = x

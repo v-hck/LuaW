@@ -12,13 +12,7 @@
 ## methods
 - [ ] 
 ### custom meta
-- [ ] \_\_tonumber: 
-- [ ] \_\_totable: 
-- [ ] \_\_tofunction: 
-- [ ] \_\_toinstance: 
-- [ ] \_\_tovector2: 
-- [ ] \_\_tovector3: 
-- [ ] \_\_tocframe: 
+См. [[metamorphosis#lts ->]]
 # meta
 - \_\_index
 - \_\_newindex: `x.y = z`: 

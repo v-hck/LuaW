@@ -21,6 +21,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 	{__pow: obj}&{__unm: obj}&{__eq: obj}&{__lt: obj}&{__le: obj}&
 	{__concat: obj}&{__tostring: obj}&{__len: obj}&{__iter: obj}
 
+return function(map)
 --init env
 	local __luaw__ = {
 		help = {
@@ -769,3 +770,4 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 				else return self._self == (ins_arg::Instance) or #self._self:GetChildren() < #ins_arg:GetChildren() end
 			else return b.err(`ins.__le: {ins_arg} is not a Instance/ins`) end
 		end
+end
