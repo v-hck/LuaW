@@ -302,7 +302,7 @@ return function(map)
 	function k.unluaw(...:any):...any
 		local lt = {...}
 		for i,obj in lt do
-			if k.il(obj) then
+			if k.isluaw(obj) then
 				lt[i] = (obj::luaw)._self
 			end
 		end; return b.un(lt)
@@ -312,7 +312,7 @@ return function(map)
 		local lt = {...}::{any}
 		for i,obj in lt do
 			local tp = b.tpf(obj)
-			if obj and atp[tp] and not(k.il(obj)) then
+			if obj and atp[tp] and not(k.isluaw(obj)) then
 				local wrap = ws[tp]
 				wrap._self, wrap._iter_lt = obj, its[tp](obj)
 				lt[i] = setmetatable(wrap, mt[tp])
@@ -360,31 +360,31 @@ return function(map)
 
 	function k.str(...:any):...str
 		local lt = {...}
-		for i,obj in lt do lt[i] = k.l(b.str(obj)) end
+		for i,obj in lt do lt[i] = k.luaw(b.str(obj)) end
 		return b.un(lt)
 	end
 
 	function k.hash(...:any):str
 		local lt, r = {...}, ""
 		for i,data in lt do
-			r = b.hash_(r .. k.ul(k.str(data)), "md5")
-		end; return k.l(r)
+			r = b.hash_(r .. k.unluaw(k.str(data)), "md5")
+		end; return k.luaw(r)
 	end
 
 	-- to any
 		function k.int(...:any):...int
 			local lt = {...}
 			for i,v in lt do 
-				if k.il(v) then lt[i] = k.l(v:__tonumber())
-				else lt[i] = k.l(b.int(v)) end
+				if k.isluaw(v) then lt[i] = k.luaw(v:__tonumber())
+				else lt[i] = k.luaw(b.int(v)) end
 			end; return b.un(lt)
 		end
 
 		function k.lst(...:any):...lts
 			local lt = {...}
 			for i,v in lt do 
-				if k.il(v) then lt[i] = k.l(v:__totable()) -- TODO: replace its[tp] to :__totable()
-				else lt[i] = k.l(b.int(v)) end
+				if k.isluaw(v) then lt[i] = k.luaw(v:__totable()) -- TODO: replace its[tp] to :__totable()
+				else lt[i] = k.luaw(b.int(v)) end
 			end; return b.un(lt)
 		end
 
@@ -394,22 +394,22 @@ return function(map)
 	o_r_Heartbeat, o_r_RenderStepped = o_r_Heartbeat, o_r_RenderStepped
 
 	function n.quick_wait(num: number?): int
-		num = k.ul(num)
+		num = k.unluaw(num)
 		if not(num) then return o_r_Heartbeat:Wait()
 		else local t, tt = tick(), 0
 			while tick() < t+num do
 				tt = tt + o_r_Heartbeat:Wait()
-			end; return k.l(tt)
+			end; return k.luaw(tt)
 		end
 	end
 
 	function n.physic_wait(num: number?): int
-		num = k.ul(num)
+		num = k.unluaw(num)
 		if not(num) then return o_r_RenderStepped:Wait()
 		else local t, tt = tick(), 0
 			while tick() < t+num do
 				tt = tt + o_r_RenderStepped:Wait()
-			end; return k.l(tt)
+			end; return k.luaw(tt)
 		end
 	end
 
@@ -450,13 +450,13 @@ return function(map)
 	end
 
 	function n.bypass_chat(msg:any, num:any, length:any)
-		num, length = k.ul(k.int(num, length))
+		num, length = k.unluaw(k.int(num, length))
 		local can = b.rep("can ", num or 10)
-		if msg == "" then n.schat(can)
+		if msg == "" then n.system_chat(can)
 		else
 			for a=1,num or (#msg/10)+1 do
-				n.schat(can)
-				n.qw(0.3)
+				n.system_chat(can)
+				n.quick_wait(0.3)
 				n.chat(msg)
 			end
 		end
@@ -464,7 +464,7 @@ return function(map)
 
 	-- n.mouse_ckick, n.mclick, n.mck = k.d(3, function()
 	-- 	o.vim:SendMouseButtonEvent(o.m.X, o.m.Y, 0, true, game, 0)
-	-- 	n.qw(0.01)
+	-- 	n.quick_wait(0.01)
 	-- 	o.vim:SendMouseButtonEvent(o.m.X, o.m.Y, 0, false, game, 0)
 	-- end)
 
@@ -476,7 +476,7 @@ return function(map)
 --help
 	function hf.pcheck(cond:any):(obj:Instance)->boolean
 		if cond == nil then return function() return true end end
-		local tp = k.tp(cond)
+		local tp = k.type(cond)
 		if tp == "string" then
 			if tp:sub(1,1) == "#" or tp:sub(2,2) == "#" then
 				if tp:sub(1,1) == "!" then
@@ -495,7 +495,7 @@ return function(map)
 				end
 			end
 		elseif tp == "table" then
-			local vtp = k.tp(cond[1])
+			local vtp = k.type(cond[1])
 			if vtp == "table" then
 				return function(obj:Instance):boolean 
 					for _,props in cond do
@@ -508,7 +508,7 @@ return function(map)
 				end
 			elseif vtp == "string" then
 				local ifs = {}
-				for i,cond in cond do ifs[i] = hf.pcheck(k.ul(cond)) end
+				for i,cond in cond do ifs[i] = hf.pcheck(k.unluaw(cond)) end
 				return function(obj:Instance):boolean
 					for _,if_ in ifs do
 						if not(if_(obj)) then
@@ -536,7 +536,7 @@ return function(map)
 		local wm_f_tp = "function"
 		local wm_f_lt, wm_f_ccq = wm[wm_f_tp], cq[wm_f_tp]
 		wm_f_lt[#wm_f_lt+1] = {props={_caching = false}, binds={"__call"}, start_or_end=true, overwrite=true, func=function(self:luaw,...:any):...any 
-			local sig = k.h(...)
+			local sig = k.hash(...)
 			local r = self._cache.__call[sig]
 			if r then return b.un(r)
 			else
@@ -555,7 +555,7 @@ return function(map)
 		local m_s_tp = "string"
 		local m_s_lt, m_s_ccq = m[m_s_tp], cq[m_s_tp]
 		function m_s_lt:run(...:any):...any
-			local h, c = k.h(self), self._cache["run"]
+			local h, c = k.hash(self), self._cache["run"]
 			local func = c[h]
 			if func then return func(...)
 			else
@@ -572,7 +572,7 @@ return function(map)
 		local m_n_lt, _m_n_ccq = m[m_n_tp], cq[m_n_tp]
 		function m_n_lt:r(mx:any, mn:any):boolean 
 			local nn = self._self
-			mx, mn = k.ul(k.int(mx, mn))
+			mx, mn = k.unluaw(k.int(mx, mn))
 			mn = (mn or 0)
 			return mx >= nn and nn >= mn 
 		end
@@ -590,47 +590,47 @@ return function(map)
 			if p then return p.func(self,i)
 			elseif m then return m
 			else
-				m = k.l(self._self[i])
+				m = k.luaw(self._self[i])
 				m._method = true
 				return m
 			end
 		end 
-		op_u_lt.__newindex = function(self:luaw,i:any,v:any) self._self[i] = k.ul(v) end 
-		op_u_lt.__call = function(self:luaw,w:luaw,...):...any return self._self(((self._method and w._self) or w), ((of[self._self] and k.ul(...)) or ...)) end
+		op_u_lt.__newindex = function(self:luaw,i:any,v:any) self._self[i] = k.unluaw(v) end 
+		op_u_lt.__call = function(self:luaw,w:luaw,...):...any return self._self(((self._method and w._self) or w), ((of[self._self] and k.unluaw(...)) or ...)) end
 		op_u_lt.__iter = function(self:luaw) return b.nxt, self._iter_lt, nil end
 		for _,tp in atp do op[tp] = op_u_lt end
 
 	-- string
 		local op_s_tp = "string"
 		local op_s_lt = op[op_s_tp]
-		op_s_lt.__unm = function(self:str):str return k.l(b.rvrs(self._self)) end
+		op_s_lt.__unm = function(self:str):str return k.luaw(b.rvrs(self._self)) end
 		-- lt.__add = function(str1, str2) return str1..str2 end -- TODO: i need idea
 		op_s_lt.__sub = function(self:str, str_arg:any):str
 			local fstr = ""
-			str_arg = k.ul(k.str(str_arg))
+			str_arg = k.unluaw(k.str(str_arg))
 			for i=1,#str_arg do fstr = fstr..`[{b.sub(str_arg,i)}]` end
 			local r,_ = b.gsub(self._self, str_arg, "")
-			return k.l(r)
+			return k.luaw(r)
 		end
-		op_s_lt.__mul = function(self:str, num:any):str return k.l(b.rep(self._self, k.ul(k.int(num)))) end
-		op_s_lt.__pow = function(self:str, num:any):str return k.l(b.rep(self._self, k.ul(k.int(num)) ^ k.ul(#self))) end
+		op_s_lt.__mul = function(self:str, num:any):str return k.luaw(b.rep(self._self, k.unluaw(k.int(num)))) end
+		op_s_lt.__pow = function(self:str, num:any):str return k.luaw(b.rep(self._self, k.unluaw(k.int(num)) ^ k.unluaw(#self))) end
 		op_s_lt.__div = function(self:str, str_arg:any):int
 			local nstr = {}
-			str_arg = k.ul(k.str(str_arg))
+			str_arg = k.unluaw(k.str(str_arg))
 			for i=1,#str_arg do nstr[#nstr+1] = `[{str_arg[i]}]` end
 			local _,num = b.gsub(self._self, b.tcnc(nstr), "")
-			return k.l(num)
+			return k.luaw(num)
 		end
-		op_s_lt.__concat = function(self:str, str_arg:any):str return k.l(self._self..k.ul(k.str(str_arg))) end
-		op_s_lt.__eq = function(self:str, str_arg:any):boolean return self._self == k.ul(k.str(str_arg)) end
-		op_s_lt.__lt = function(self:str, str_arg:any):boolean return self._self < k.ul(k.str(str_arg)) end
-		op_s_lt.__le = function(self:str, str_arg:any):boolean return self._self <= k.ul(k.str(str_arg)) end
-		op_s_lt.__len = function(self:str):int return k.l(#self._self) end
+		op_s_lt.__concat = function(self:str, str_arg:any):str return k.luaw(self._self..k.unluaw(k.str(str_arg))) end
+		op_s_lt.__eq = function(self:str, str_arg:any):boolean return self._self == k.unluaw(k.str(str_arg)) end
+		op_s_lt.__lt = function(self:str, str_arg:any):boolean return self._self < k.unluaw(k.str(str_arg)) end
+		op_s_lt.__le = function(self:str, str_arg:any):boolean return self._self <= k.unluaw(k.str(str_arg)) end
+		op_s_lt.__len = function(self:str):int return k.luaw(#self._self) end
 		
 	-- function
 		local op_f_tp = "function"
 		local op_f_lt = op[op_f_tp]
-		op_f_lt.__unm = function(self:bin):bin return k.l(function(...) return b.pcl(self._self,...) end) end
+		op_f_lt.__unm = function(self:bin):bin return k.luaw(function(...) return b.pcl(self._self,...) end) end
 
 	-- table 
 		local op_t_tp = "table"
@@ -638,7 +638,7 @@ return function(map)
 		op_t_lt.__add = function(self:lts, lt_arg:any):lts
 			local lipairs = 0
 			for i,_ in ipairs(self._iter_lt) do lipairs = i end
-			for i,v in k.l(lt_arg) do 
+			for i,v in k.luaw(lt_arg) do 
 				if typeof(i) == "number" then
 					lipairs += 1
 					self[lipairs] = v
@@ -670,9 +670,9 @@ return function(map)
 				end
 			end; return self
 		end
-		op_t_lt.__div = function(self:lts, obj:any):int local r = 0; for _,v in self do if v == obj then r += 1 end end; return k.l(r) end
-		op_t_lt.__idiv = function(self:lts, obj:any):int local r = 0; for i,_ in self do if i == obj then r += 1 end end; return k.l(r) end
-		op_t_lt.__mod = function(self:lts, obj:any):int local r = 0; for i,v in self do if i == obj or v == obj then r += 1 end end; return k.l(r) end
+		op_t_lt.__div = function(self:lts, obj:any):int local r = 0; for _,v in self do if v == obj then r += 1 end end; return k.luaw(r) end
+		op_t_lt.__idiv = function(self:lts, obj:any):int local r = 0; for i,_ in self do if i == obj then r += 1 end end; return k.luaw(r) end
+		op_t_lt.__mod = function(self:lts, obj:any):int local r = 0; for i,v in self do if i == obj or v == obj then r += 1 end end; return k.luaw(r) end
 
 	-- TODO: Instance
 		-- ins + ins 2 в 1
@@ -682,19 +682,19 @@ return function(map)
 		local op_i_tp = "Instance"
 		local op_i_lt = op[op_i_tp]
 		op_i_lt.__call = function(self:ins, int_arg:int|number|any, cond:any):gins
-			local if_,r = hf.pcheck(k.ul(cond)),{self}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{self}
 			int_arg = (int_arg and k.int(int_arg)._self) or 1
 			for a=0, int_arg::number do
 				local tr = r; r = {}
 				for _,parent in tr do
 					for _,obj in parent do
-						if if_(k.ul(obj)) then 
+						if if_(k.unluaw(obj)) then 
 							r[#r+1] = obj
 						end
 					end
 				end
 			end; r._type = "GInstance"
-			return k.l(r)
+			return k.luaw(r)
 		end
 		op_i_lt.__len = function(self:ins) return #self._self:GetChildren() end -- TODO: comb with iter and cache
 		op_i_lt.__add = function(self:ins, ins_arg:ins&Instance):ins?
@@ -703,78 +703,78 @@ return function(map)
 			else return b.err(`ins.__add: {ins_arg} is not a Instance/ins/gins`) end
 		end
 		op_i_lt.__sub = function(self:ins, cond:any):lts_<{str}>
-			local if_,r = hf.pcheck(k.ul(cond)),{}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{}
 			for _,obj in self do 
-				if if_(k.ul(obj)) then 
+				if if_(k.unluaw(obj)) then 
 					r[#r+1] = obj.Name
 					obj:Destroy()
 				end
-			end; return k.l(r)
+			end; return k.luaw(r)
 		end
 		op_i_lt.__mul = function(self:ins, cond:any):gins
-			local if_,r = hf.pcheck(k.ul(cond)),{}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{}
 			for _,obj in self do 
-				if if_(k.ul(obj)) then 
+				if if_(k.unluaw(obj)) then 
 					r[#r+1] = obj:Clone()
 				end
 			end; r._type = "GInstance"
-			return k.l(r)
+			return k.luaw(r)
 		end
 		op_i_lt.__pow = function(self:ins, cond:any):gins
-			local if_,r = hf.pcheck(k.ul(cond)),{}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{}
 			for _,obj in self do 
-				if if_(k.ul(obj)) then 
-					r[#r+1] = k.l(b.ifex(obj))
+				if if_(k.unluaw(obj)) then 
+					r[#r+1] = k.luaw(b.ifex(obj))
 				end
 			end; r._type = "GInstance"
-			return k.l(r)
+			return k.luaw(r)
 		end
 		op_i_lt.__div = function(self:ins, cond:any):gins
-			local if_,r = hf.pcheck(k.ul(cond)),{}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{}
 			for _,obj in self do 
-				if if_(k.ul(obj)) then 
+				if if_(k.unluaw(obj)) then 
 					obj.Parent = nil
 					r[#r+1] = obj
 				end
 			end; r._type = "GInstance"
-			return k.l(r)
+			return k.luaw(r)
 		end
 		op_i_lt.__idiv = function(self:ins, cond:any):gins
-			local if_,r = hf.pcheck(k.ul(cond)),{}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{}
 			for _,obj in self do 
-				if if_(k.ul(obj)) then 
+				if if_(k.unluaw(obj)) then 
 					local parent = obj.Parent
 					for _,child in obj do child.Parent = parent end
 					obj.Parent = nil
 					r[#r+1] = obj
 				end
 			end; r._type = "GInstance"
-			return k.l(r)
+			return k.luaw(r)
 		end
 		op_i_lt.__mod = function(self:ins, cond:any):gins
-			local if_,r = hf.pcheck(k.ul(cond)),{}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{}
 			for _,obj in self._self:GetChildren() do 
-				if if_(k.ul(obj)) then 
+				if if_(k.unluaw(obj)) then 
 					r[#r+1] = obj
 				end
 			end; r._type = "GInstance"
-			return k.l(r)
+			return k.luaw(r)
 		end
 		op_i_lt.__eq = function(self:ins, ins_arg:ins&Instance):boolean?
 			if b.tpf(ins_arg) == "Instance" then
-				if k.il(ins_arg) then return self._self == ins_arg._self
+				if k.isluaw(ins_arg) then return self._self == ins_arg._self
 				else return self._self == (ins_arg::Instance) end
 			else return b.err(`ins.__eq: {ins_arg} is not a Instance/ins`) end
 		end
 		op_i_lt.__lt = function(self:ins, ins_arg:ins&Instance):boolean?
 			if b.tpf(ins_arg) == "Instance" then
-				if k.il(ins_arg) then return #self._self:GetChildren() < #ins_arg._self:GetChildren()
+				if k.isluaw(ins_arg) then return #self._self:GetChildren() < #ins_arg._self:GetChildren()
 				else return #self._self:GetChildren() < #ins_arg:GetChildren() end
 			else return b.err(`ins.__lt: {ins_arg} is not a Instance/ins`) end
 		end
 		op_i_lt.__le = function(self:ins, ins_arg:ins&Instance):boolean?
 			if b.tpf(ins_arg) == "Instance" then
-				if k.il(ins_arg) then return self._self == ins_arg._self or #self._self:GetChildren() < #ins_arg._self:GetChildren()
+				if k.isluaw(ins_arg) then return self._self == ins_arg._self or #self._self:GetChildren() < #ins_arg._self:GetChildren()
 				else return self._self == (ins_arg::Instance) or #self._self:GetChildren() < #ins_arg:GetChildren() end
 			else return b.err(`ins.__le: {ins_arg} is not a Instance/ins`) end
 		end
