@@ -129,11 +129,11 @@ return function(map)
 
 			-- FIX: rng text
 			-- local txt = d.text
-			-- 	local ltt = txt.letters
-			-- 	local nms = txt.numbers
-			-- 	local sbl = txt.symbols
-			-- 	local vdc = txt.valid_combo
-			-- 	local ltls = {l=ltt, n=nms, s=sbl}
+			--  local ltt = txt.letters
+			--  local nms = txt.numbers
+			--  local sbl = txt.symbols
+			--  local vdc = txt.valid_combo
+			--  local ltls = {l=ltt, n=nms, s=sbl}
 		
 		local hp = __luaw__.help
 			local amt = hp.all_meta
@@ -281,10 +281,10 @@ return function(map)
 		return b.un(lt)
 	end; k.d, k.dup = k.duplicate, k.duplicate
 
-	k.tp, k.type = k.d(2, function(obj:any):string
+	function k.type(obj:any):string
 		local tp = b.tpf(obj)
 		return (tp == "table" and (obj::luaw)._type) or tp
-	end)
+	end
 	
 	-- k.md, k.mdup, k.multy_duplicate = k.d(3, function(num, ...)
 	-- 	local lt, dlt = {...}, {}
@@ -295,20 +295,20 @@ return function(map)
 	-- 	end; return s.unpack(dlt)
 	-- end)
 
-	k.il, k.islw, k.isluaw = k.d(3, function(obj:any):any|false
+	function k.isluaw(obj:any):any|false
 		return (b.tpf(obj) == "table" and (obj::luaw)._self) or false 
-	end)
+	end
 
-	k.ul, k.unlw, k.unluaw = k.d(3, function(...:any):...any
+	function k.unluaw(...:any):...any
 		local lt = {...}
 		for i,obj in lt do
 			if k.il(obj) then
 				lt[i] = (obj::luaw)._self
 			end
 		end; return b.un(lt)
-	end)
+	end
 
-	k.l, k.lw, k.luaw = k.d(3, function<T>(...:T):...luaw_<T>
+	function k.luaw<T>(...:T):...luaw_<T>
 		local lt = {...}::{any}
 		for i,obj in lt do
 			local tp = b.tpf(obj)
@@ -318,9 +318,9 @@ return function(map)
 				lt[i] = setmetatable(wrap, mt[tp])
 			end
 		end; return b.un(lt)
-	end)
+	end
 
-	k.mk, k.make = k.d(2, function()
+	function k.make()
 		local wmf = {{},{}}
 		for _,tp in atp do mt[tp], ws[tp] = {}, {} end
 		for tp,dp in dp::{[string]: any} do
@@ -356,7 +356,7 @@ return function(map)
 			end
 			mt[tp] = lt
 		end
-	end)
+	end
 
 	function k.str(...:any):...str
 		local lt = {...}
@@ -364,12 +364,12 @@ return function(map)
 		return b.un(lt)
 	end
 
-	k.h, k.hash = k.d(2, function(...:any):str
+	function k.hash(...:any):str
 		local lt, r = {...}, ""
 		for i,data in lt do
 			r = b.hash_(r .. k.ul(k.str(data)), "md5")
 		end; return k.l(r)
-	end)
+	end
 
 	-- to any
 		function k.int(...:any):...int
@@ -392,20 +392,28 @@ return function(map)
 	local o_r_Heartbeat, o_r_RenderStepped = ro.r.Heartbeat, ro.r.RenderStepped
 	-- HACK: for bypess warning
 	o_r_Heartbeat, o_r_RenderStepped = o_r_Heartbeat, o_r_RenderStepped
-	local ft1, ft2 = [[return function(num)
-		local event = ]],[[
+
+	function n.quick_wait(num: number?): int
 		num = k.ul(num)
-		if not(num) then return event:Wait()
+		if not(num) then return o_r_Heartbeat:Wait()
 		else local t, tt = tick(), 0
 			while tick() < t+num do
-				tt = tt + event:Wait()
+				tt = tt + o_r_Heartbeat:Wait()
 			end; return k.l(tt)
 		end
-	end]]
+	end
 
-	n.qw, n.qwait, n.quick_wait = k.dup(3, b.exec(`{ft1}o_r_Heartbeat{ft2}`)::(num:number?)->(int)) 
-	n.pw, n.pwait, n.physic_wait = k.dup(3, b.exec(`{ft1}o_r_RenderStepped{ft2}`)::(num:number?)->(int))
-	n.tw, n.twait, n.task_wait = k.dup(3, task.wait)
+	function n.physic_wait(num: number?): int
+		num = k.ul(num)
+		if not(num) then return o_r_RenderStepped:Wait()
+		else local t, tt = tick(), 0
+			while tick() < t+num do
+				tt = tt + o_r_RenderStepped:Wait()
+			end; return k.l(tt)
+		end
+	end
+
+	n.task_wait = task.wait
 
 	-- n.random_text, n.rtext, n.rt = k.dup(3, function(length, input)
 	-- 	if cfg.warn then
@@ -429,19 +437,19 @@ return function(map)
 	-- 	end; return output
 	-- end)
 
-	n.chat, n.cht, n.ct = k.d(3, function(msg:any)
+	function n.chat(msg:any)
 		if ro.cs.ChatVersion == Enum.ChatVersion.TextChatService then
 			ro.cs.TextChannels.RBXGeneral:SendAsync(k.str(msg)._self)
 		elseif ro.saymsg then
 			ro.saymsg:FireServer(k.str(msg)._self, "All")
 		end
-	end)
+	end
 
-	n.system_chat, n.schat, n.sc = k.d(3, function(msg:any)
+	function n.system_chat(msg:any)
 		ro.p:Chat(k.str(msg)._self)
-	end)
+	end
 
-	n.bypass_chat, n.bchat, n.bc = k.d(3, function(msg:any, num:any, length:any)
+	function n.bypass_chat(msg:any, num:any, length:any)
 		num, length = k.ul(k.int(num, length))
 		local can = b.rep("can ", num or 10)
 		if msg == "" then n.schat(can)
@@ -452,7 +460,7 @@ return function(map)
 				n.chat(msg)
 			end
 		end
-	end)
+	end
 
 	-- n.mouse_ckick, n.mclick, n.mck = k.d(3, function()
 	-- 	o.vim:SendMouseButtonEvent(o.m.X, o.m.Y, 0, true, game, 0)
@@ -460,10 +468,10 @@ return function(map)
 	-- 	o.vim:SendMouseButtonEvent(o.m.X, o.m.Y, 0, false, game, 0)
 	-- end)
 
-	n.ifo, n.if_or = k.d(2, function(b:any, v1:any, v2:any):any
+	function n.if_or(b:any, v1:any, v2:any):any
 		if not(v2) then return b or v1
 		else return (b and v1) or v2 end
-	end)
+	end
 
 --help
 	function hf.pcheck(cond:any):(obj:Instance)->boolean
