@@ -272,8 +272,6 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			end
 
 --kernel	
-	-- TODO: need to make split api to kernel and custom for safe framework funcs if user wants remake core funcs	
-
 	function k.duplicate<t>(num:number, obj:t):...t
 		local lt = {}
 		for a=1,num do lt[a] = obj end
