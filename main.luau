@@ -21,12 +21,41 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 	{__pow: obj}&{__unm: obj}&{__eq: obj}&{__lt: obj}&{__le: obj}&
 	{__concat: obj}&{__tostring: obj}&{__len: obj}&{__iter: obj}
 
-return function(map)
+type cfg = {
+	log: boolean?,
+	warns: boolean?,
+	make_maps_DONT: boolean?,
+	make_map_DontCheckDups: boolean?,
+	make_map_DontSkipMiss: boolean?,
+	make_map_DontHandleLastEnv: boolean?
+}
+
+type map = {[string]: {string}}
+
+return function(
+	config: cfg?, 
+	maps:{
+		type_system: {
+			default_props: map?,
+			func_props: map?,
+			methods: map?,
+		},
+		funcs: {
+			kernel: map?,
+			normal: map?,
+		},
+		objects: {
+			roblox: map?,
+			luaw: map?,
+		}
+	}?
+)
 --init env
 	local __luaw__ = {
 		help = {
 			all_meta = {},
-			all_types = {}
+			all_types = {},
+			last_env = {},
 		},
 		type_system = {
 			raw = {
@@ -56,15 +85,13 @@ return function(map)
 			roblox = {},
 			luaw = {}
 		},
-		config = {
-			log = true,
-			warn = true
-		}
+		config = {}
 	}
 	::{
 		help: {
 			all_meta: {meta_methods},
-			all_types: {types_str}
+			all_types: {types_str},
+			last_env: {[string]: string},
 		},
 		type_system: {
 			help: {
@@ -94,10 +121,7 @@ return function(map)
 			roblox: {[string]: any},
 			luaw: {[string]: any}
 		},
-		config: {
-			log: boolean,
-			warn: boolean
-		}
+		config: cfg
 	}
 
 		local f = __luaw__.funcs
@@ -138,6 +162,7 @@ return function(map)
 		local hp = __luaw__.help
 			local amt = hp.all_meta
 			local atp = hp.all_types
+			local lenv = hp.last_env
 
 		local cfg = __luaw__.config
 
@@ -154,17 +179,7 @@ return function(map)
 	for i,_ in tshp do tshp[i] = table.clone(atp_lt) end
 
 	dp["Instance"]["_method"] = false
-
-	local function collect_orig(lt)
-		for _,obj in lt do
-			local tp = typeof(obj)
-			if tp == "function" then
-				of[obj] = true
-			elseif tp == "table" then
-				collect_orig(obj)
-			end
-		end
-	end; collect_orig(getgenv())
+	b["gg"] = getgenv
 
 	-- FIX: rng text
 	-- for a=65, 90 do ltt[#ltt+1] = string.char(a) end
@@ -176,7 +191,19 @@ return function(map)
 	-- for a=123, 126 do sbl[#sbl+1] = string.char(a) end
 	-- vdc = {"l", "n", "s", "ln", "ns", "sl", "lns", "ls", "nl", "sn", "snl"}
 
-	b["gg"] = getgenv
+	if config then for i,v in config do cfg[i] = v end end
+
+-- local funcs
+	local function collect_orig(lt)
+		for _,obj in lt do
+			local tp = typeof(obj)
+			if tp == "function" then
+				of[obj] = true
+			elseif tp == "table" then
+				collect_orig(obj)
+			end
+		end
+	end; collect_orig(b.gg())
 
 	local function port_save(name2:string, ...:string)
 		local obj = b.gg()
@@ -184,8 +211,14 @@ return function(map)
 		b[name2] = obj
 	end
 
--- port&save | port_save("____", "____")
-	-- HACK: ONLY FOR EDIT: idk how to add correct annotation to port_save
+	local function warn(...)
+		if cfg.warns then
+			b.warn(b.tcnc({...}, "|"))
+		end
+	end
+
+-- port&save | port_save("____", "____") TODO: rethink
+	-- INFO: ONLY FOR EDIT: idk how to add correct annotation to port_save
 		b.str = tostring
 		b.int = tonumber
 		b.exec = loadstring
@@ -321,6 +354,28 @@ return function(map)
 	end
 
 	function k.make()
+		if maps and not(cfg.make_maps_DONT) then
+			local env = {}
+			
+			for _,map in {maps.funcs.normal, maps.funcs.kernel, maps.objects.roblox, maps.objects.luaw} do
+				for i,dups in map::map do
+					for _,dup in dups do
+						local f = env[dup]
+						if not(f) then env[dup] = i
+						elseif not(cfg.make_map_DontCheckDups) then b.error(`@k.make #map.dups: {i} and {f} wanna {dup}`)
+						else warn(`@k.make #map.dups: {i} and {f} wanna {dup}`) end
+					end
+					 -- TODO: cfg.make_map_DontSkipMiss
+				end
+			end
+			
+			if not(cfg.make_map_DontHandleLastEnv) then
+				for i in lenv do b.gg()[i] = nil end
+				lenv = b.tcln(env)
+				for i in env do b.gg()[] =  end
+			end
+		end
+
 		local wmf = {{},{}}
 		for _,tp in atp do mt[tp], ws[tp] = {}, {} end
 		for tp,dp in dp::{[string]: any} do
@@ -347,7 +402,7 @@ return function(map)
 					else local mod = emod.f; lt[meta] = function(...) return func(mod(...)) end end
 				end
 			end
-			if cfg.log then 
+			if cfg.log then -- TODO: bring to unv mods
 				for meta,func in lt do
 					local v:string = b.sub(meta, 2,-1)
 					ws[tp][v] = 0
@@ -356,7 +411,7 @@ return function(map)
 			end
 			mt[tp] = lt
 		end
-	end
+	end -- TODO: invoke event 
 
 	function k.str(...:any):...str
 		local lt = {...}
@@ -416,7 +471,7 @@ return function(map)
 	n.task_wait = task.wait
 
 	-- n.random_text, n.rtext, n.rt = k.dup(3, function(length, input)
-	-- 	if cfg.warn then
+	-- 	if cfg.warns then
 	-- 		if input == "" then
 	-- 			warn('random_text: input == ""')
 	-- 			input = "l"
@@ -500,7 +555,7 @@ return function(map)
 				return function(obj:Instance):boolean 
 					for _,props in cond do
 						for prop,v in props do
-							if not(obj[prop] == v) then -- HACK: this must be warning
+							if not(obj[prop] == v) then -- INFO: this must be warning
 								return false
 							end
 						end
@@ -778,4 +833,7 @@ return function(map)
 				else return self._self == (ins_arg::Instance) or #self._self:GetChildren() < #ins_arg:GetChildren() end
 			else return b.err(`ins.__le: {ins_arg} is not a Instance/ins`) end
 		end
+
+	k.make()
+	
 end
