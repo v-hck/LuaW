@@ -12,13 +12,7 @@
 ## methods
 - [ ] 
 ### custom meta
-- \_\_tonumber: 
-- [ ] \_\_totable: 
-- [ ] \_\_tofunction: 
-- \_\_toinstance: 
-- [ ] \_\_tovector2: по половине на каждую кардинату
-- [ ] \_\_tovector3: по половине на каждую кардинату
-- [ ] \_\_tocframe: по половине на каждую кардинату и нулевой лук
+См. [[metamorphosis#int ->]]
 # meta
 - \_\_index
 - [ ] \_\_newindex: `x.y = z`: 

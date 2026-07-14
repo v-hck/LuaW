@@ -38,13 +38,7 @@
 - [ ] \_\_iter: `in x`: по буквам
 - \_\_tostring: 
 ## custom
-- [ ] \_\_tonumber: 
-- [ ] \_\_totable: 
-- [ ] \_\_tofunction: 
-- [ ] \_\_toinstance: 
-- [ ] \_\_tovector2: 
-- [ ] \_\_tovector3: 
-- [ ] \_\_tocframe: 
+См. [[metamorphosis#str ->]]
 # raw ideas
 - [x] blacklist и whitelist символов/подстрок ✅ 2026-05-07
 	- [x] опциональный с экранированием через \ ✅ 2026-05-07

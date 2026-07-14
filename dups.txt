@@ -1,0 +1,13 @@
+k.type → k.tp
+k.isluaw → k.il, k.islw
+k.unluaw → k.ul, k.unlw
+k.luaw → k.l, k.lw
+k.make → k.mk
+k.hash → k.h
+n.quick_wait → n.qw, n.qwait
+n.physic_wait → n.pw, n.pwait
+n.task_wait → n.tw, n.twait
+n.chat → n.cht, n.ct
+n.system_chat → n.schat, n.sc
+n.bypass_chat → n.bchat, n.bc
+n.if_or → n.ifo

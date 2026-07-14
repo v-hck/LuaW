@@ -12,13 +12,7 @@
 ## methods
 - [ ] [[lts#methods]]
 ### custom meta
-- [ ] \_\_tonumber: вес данных
-- [ ] \_\_totable: [[суперпозиция]]
-- [ ] \_\_tofunction: [[суперпозиция]]
-- [ ] \_\_toinstance: создание [[ins]] как из [[lts]]
-- [ ] \_\_tovector2: [[суперпозиция]]
-- [ ] \_\_tovector3: [[суперпозиция]]
-- [ ] \_\_tocframe: [[суперпозиция]]
+См. [[metamorphosis#json ->]]
 # meta
 - [ ] \_\_index: `x.y:str!`: индексация **json** **y** из **x**
 - [ ] \_\_newindex: `x.y:str! = z:any`: добавление **z** как **y** в **x**

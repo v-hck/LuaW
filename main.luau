@@ -21,11 +21,41 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 	{__pow: obj}&{__unm: obj}&{__eq: obj}&{__lt: obj}&{__le: obj}&
 	{__concat: obj}&{__tostring: obj}&{__len: obj}&{__iter: obj}
 
+type cfg = {
+	log: boolean?,
+	warns: boolean?,
+	make_maps_DONT: boolean?,
+	make_map_DontCheckDups: boolean?,
+	make_map_DontSkipMiss: boolean?,
+	make_map_DontHandleLastEnv: boolean?
+}
+
+type map = {[string]: {string}}
+
+return function(
+	config: cfg?, 
+	maps:{
+		type_system: {
+			default_props: map?,
+			func_props: map?,
+			methods: map?,
+		},
+		funcs: {
+			kernel: map?,
+			normal: map?,
+		},
+		objects: {
+			roblox: map?,
+			luaw: map?,
+		}
+	}?
+)
 --init env
 	local __luaw__ = {
 		help = {
 			all_meta = {},
-			all_types = {}
+			all_types = {},
+			last_env = {},
 		},
 		type_system = {
 			raw = {
@@ -55,15 +85,13 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			roblox = {},
 			luaw = {}
 		},
-		config = {
-			log = true,
-			warn = true
-		}
+		config = {}
 	}
 	::{
 		help: {
 			all_meta: {meta_methods},
-			all_types: {types_str}
+			all_types: {types_str},
+			last_env: {[string]: string},
 		},
 		type_system: {
 			help: {
@@ -93,10 +121,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			roblox: {[string]: any},
 			luaw: {[string]: any}
 		},
-		config: {
-			log: boolean,
-			warn: boolean
-		}
+		config: cfg
 	}
 
 		local f = __luaw__.funcs
@@ -128,15 +153,16 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 
 			-- FIX: rng text
 			-- local txt = d.text
-			-- 	local ltt = txt.letters
-			-- 	local nms = txt.numbers
-			-- 	local sbl = txt.symbols
-			-- 	local vdc = txt.valid_combo
-			-- 	local ltls = {l=ltt, n=nms, s=sbl}
+			--  local ltt = txt.letters
+			--  local nms = txt.numbers
+			--  local sbl = txt.symbols
+			--  local vdc = txt.valid_combo
+			--  local ltls = {l=ltt, n=nms, s=sbl}
 		
 		local hp = __luaw__.help
 			local amt = hp.all_meta
 			local atp = hp.all_types
+			local lenv = hp.last_env
 
 		local cfg = __luaw__.config
 
@@ -153,17 +179,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 	for i,_ in tshp do tshp[i] = table.clone(atp_lt) end
 
 	dp["Instance"]["_method"] = false
-
-	local function collect_orig(lt)
-		for _,obj in lt do
-			local tp = typeof(obj)
-			if tp == "function" then
-				of[obj] = true
-			elseif tp == "table" then
-				collect_orig(obj)
-			end
-		end
-	end; collect_orig(getgenv())
+	b["gg"] = getgenv
 
 	-- FIX: rng text
 	-- for a=65, 90 do ltt[#ltt+1] = string.char(a) end
@@ -175,7 +191,19 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 	-- for a=123, 126 do sbl[#sbl+1] = string.char(a) end
 	-- vdc = {"l", "n", "s", "ln", "ns", "sl", "lns", "ls", "nl", "sn", "snl"}
 
-	b["gg"] = getgenv
+	if config then for i,v in config do cfg[i] = v end end
+
+-- local funcs
+	local function collect_orig(lt)
+		for _,obj in lt do
+			local tp = typeof(obj)
+			if tp == "function" then
+				of[obj] = true
+			elseif tp == "table" then
+				collect_orig(obj)
+			end
+		end
+	end; collect_orig(b.gg())
 
 	local function port_save(name2:string, ...:string)
 		local obj = b.gg()
@@ -183,8 +211,14 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 		b[name2] = obj
 	end
 
--- port&save | port_save("____", "____")
-	-- HACK: ONLY FOR EDIT: idk how to add correct annotation to port_save
+	local function warn(...)
+		if cfg.warns then
+			b.warn(b.tcnc({...}, "|"))
+		end
+	end
+
+-- port&save | port_save("____", "____") TODO: rethink
+	-- INFO: ONLY FOR EDIT: idk how to add correct annotation to port_save
 		b.str = tostring
 		b.int = tonumber
 		b.exec = loadstring
@@ -278,10 +312,10 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 		return b.un(lt)
 	end; k.d, k.dup = k.duplicate, k.duplicate
 
-	k.tp, k.type = k.d(2, function(obj:any):string
+	function k.type(obj:any):string
 		local tp = b.tpf(obj)
 		return (tp == "table" and (obj::luaw)._type) or tp
-	end)
+	end
 	
 	-- k.md, k.mdup, k.multy_duplicate = k.d(3, function(num, ...)
 	-- 	local lt, dlt = {...}, {}
@@ -292,32 +326,54 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 	-- 	end; return s.unpack(dlt)
 	-- end)
 
-	k.il, k.islw, k.isluaw = k.d(3, function(obj:any):any|false
+	function k.isluaw(obj:any):any|false
 		return (b.tpf(obj) == "table" and (obj::luaw)._self) or false 
-	end)
+	end
 
-	k.ul, k.unlw, k.unluaw = k.d(3, function(...:any):...any
+	function k.unluaw(...:any):...any
 		local lt = {...}
 		for i,obj in lt do
-			if k.il(obj) then
+			if k.isluaw(obj) then
 				lt[i] = (obj::luaw)._self
 			end
 		end; return b.un(lt)
-	end)
+	end
 
-	k.l, k.lw, k.luaw = k.d(3, function<T>(...:T):...luaw_<T>
+	function k.luaw<T>(...:T):...luaw_<T>
 		local lt = {...}::{any}
 		for i,obj in lt do
 			local tp = b.tpf(obj)
-			if obj and atp[tp] and not(k.il(obj)) then
+			if obj and atp[tp] and not(k.isluaw(obj)) then
 				local wrap = ws[tp]
 				wrap._self, wrap._iter_lt = obj, its[tp](obj)
 				lt[i] = setmetatable(wrap, mt[tp])
 			end
 		end; return b.un(lt)
-	end)
+	end
 
-	k.mk, k.make = k.d(2, function()
+	function k.make()
+		if maps and not(cfg.make_maps_DONT) then
+			local env = {}
+			
+			for _,map in {maps.funcs.normal, maps.funcs.kernel, maps.objects.roblox, maps.objects.luaw} do
+				for i,dups in map::map do
+					for _,dup in dups do
+						local f = env[dup]
+						if not(f) then env[dup] = i
+						elseif not(cfg.make_map_DontCheckDups) then b.error(`@k.make #map.dups: {i} and {f} wanna {dup}`)
+						else warn(`@k.make #map.dups: {i} and {f} wanna {dup}`) end
+					end
+					 -- TODO: cfg.make_map_DontSkipMiss
+				end
+			end
+			
+			if not(cfg.make_map_DontHandleLastEnv) then
+				for i in lenv do b.gg()[i] = nil end
+				lenv = b.tcln(env)
+				for i in env do b.gg()[] =  end
+			end
+		end
+
 		local wmf = {{},{}}
 		for _,tp in atp do mt[tp], ws[tp] = {}, {} end
 		for tp,dp in dp::{[string]: any} do
@@ -344,7 +400,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 					else local mod = emod.f; lt[meta] = function(...) return func(mod(...)) end end
 				end
 			end
-			if cfg.log then 
+			if cfg.log then -- TODO: bring to unv mods
 				for meta,func in lt do
 					local v:string = b.sub(meta, 2,-1)
 					ws[tp][v] = 0
@@ -353,35 +409,35 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			end
 			mt[tp] = lt
 		end
-	end)
+	end -- TODO: invoke event 
 
 	function k.str(...:any):...str
 		local lt = {...}
-		for i,obj in lt do lt[i] = k.l(b.str(obj)) end
+		for i,obj in lt do lt[i] = k.luaw(b.str(obj)) end
 		return b.un(lt)
 	end
 
-	k.h, k.hash = k.d(2, function(...:any):str
+	function k.hash(...:any):str
 		local lt, r = {...}, ""
 		for i,data in lt do
-			r = b.hash_(r .. k.ul(k.str(data)), "md5")
-		end; return k.l(r)
-	end)
+			r = b.hash_(r .. k.unluaw(k.str(data)), "md5")
+		end; return k.luaw(r)
+	end
 
 	-- to any
 		function k.int(...:any):...int
 			local lt = {...}
 			for i,v in lt do 
-				if k.il(v) then lt[i] = k.l(v:__tonumber())
-				else lt[i] = k.l(b.int(v)) end
+				if k.isluaw(v) then lt[i] = k.luaw(v:__tonumber())
+				else lt[i] = k.luaw(b.int(v)) end
 			end; return b.un(lt)
 		end
 
 		function k.lst(...:any):...lts
 			local lt = {...}
 			for i,v in lt do 
-				if k.il(v) then lt[i] = k.l(v:__totable()) -- TODO: replace its[tp] to :__totable()
-				else lt[i] = k.l(b.int(v)) end
+				if k.isluaw(v) then lt[i] = k.luaw(v:__totable()) -- TODO: replace its[tp] to :__totable()
+				else lt[i] = k.luaw(b.int(v)) end
 			end; return b.un(lt)
 		end
 
@@ -389,23 +445,31 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 	local o_r_Heartbeat, o_r_RenderStepped = ro.r.Heartbeat, ro.r.RenderStepped
 	-- HACK: for bypess warning
 	o_r_Heartbeat, o_r_RenderStepped = o_r_Heartbeat, o_r_RenderStepped
-	local ft1, ft2 = [[return function(num)
-		local event = ]],[[
-		num = k.ul(num)
-		if not(num) then return event:Wait()
+
+	function n.quick_wait(num: number?): int
+		num = k.unluaw(num)
+		if not(num) then return o_r_Heartbeat:Wait()
 		else local t, tt = tick(), 0
 			while tick() < t+num do
-				tt = tt + event:Wait()
-			end; return k.l(tt)
+				tt = tt + o_r_Heartbeat:Wait()
+			end; return k.luaw(tt)
 		end
-	end]]
+	end
 
-	n.qw, n.qwait, n.quick_wait = k.dup(3, b.exec(`{ft1}o_r_Heartbeat{ft2}`)::(num:number?)->(int)) 
-	n.pw, n.pwait, n.physic_wait = k.dup(3, b.exec(`{ft1}o_r_RenderStepped{ft2}`)::(num:number?)->(int))
-	n.tw, n.twait, n.task_wait = k.dup(3, task.wait)
+	function n.physic_wait(num: number?): int
+		num = k.unluaw(num)
+		if not(num) then return o_r_RenderStepped:Wait()
+		else local t, tt = tick(), 0
+			while tick() < t+num do
+				tt = tt + o_r_RenderStepped:Wait()
+			end; return k.luaw(tt)
+		end
+	end
+
+	n.task_wait = task.wait
 
 	-- n.random_text, n.rtext, n.rt = k.dup(3, function(length, input)
-	-- 	if cfg.warn then
+	-- 	if cfg.warns then
 	-- 		if input == "" then
 	-- 			warn('random_text: input == ""')
 	-- 			input = "l"
@@ -426,46 +490,46 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 	-- 	end; return output
 	-- end)
 
-	n.chat, n.cht, n.ct = k.d(3, function(msg:any)
+	function n.chat(msg:any)
 		if ro.cs.ChatVersion == Enum.ChatVersion.TextChatService then
 			ro.cs.TextChannels.RBXGeneral:SendAsync(k.str(msg)._self)
 		elseif ro.saymsg then
 			ro.saymsg:FireServer(k.str(msg)._self, "All")
 		end
-	end)
+	end
 
-	n.system_chat, n.schat, n.sc = k.d(3, function(msg:any)
+	function n.system_chat(msg:any)
 		ro.p:Chat(k.str(msg)._self)
-	end)
+	end
 
-	n.bypass_chat, n.bchat, n.bc = k.d(3, function(msg:any, num:any, length:any)
-		num, length = k.ul(k.int(num, length))
+	function n.bypass_chat(msg:any, num:any, length:any)
+		num, length = k.unluaw(k.int(num, length))
 		local can = b.rep("can ", num or 10)
-		if msg == "" then n.schat(can)
+		if msg == "" then n.system_chat(can)
 		else
 			for a=1,num or (#msg/10)+1 do
-				n.schat(can)
-				n.qw(0.3)
+				n.system_chat(can)
+				n.quick_wait(0.3)
 				n.chat(msg)
 			end
 		end
-	end)
+	end
 
 	-- n.mouse_ckick, n.mclick, n.mck = k.d(3, function()
 	-- 	o.vim:SendMouseButtonEvent(o.m.X, o.m.Y, 0, true, game, 0)
-	-- 	n.qw(0.01)
+	-- 	n.quick_wait(0.01)
 	-- 	o.vim:SendMouseButtonEvent(o.m.X, o.m.Y, 0, false, game, 0)
 	-- end)
 
-	n.ifo, n.if_or = k.d(2, function(b:any, v1:any, v2:any):any
+	function n.if_or(b:any, v1:any, v2:any):any
 		if not(v2) then return b or v1
 		else return (b and v1) or v2 end
-	end)
+	end
 
 --help
 	function hf.pcheck(cond:any):(obj:Instance)->boolean
 		if cond == nil then return function() return true end end
-		local tp = k.tp(cond)
+		local tp = k.type(cond)
 		if tp == "string" then
 			if tp:sub(1,1) == "#" or tp:sub(2,2) == "#" then
 				if tp:sub(1,1) == "!" then
@@ -484,12 +548,12 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 				end
 			end
 		elseif tp == "table" then
-			local vtp = k.tp(cond[1])
+			local vtp = k.type(cond[1])
 			if vtp == "table" then
 				return function(obj:Instance):boolean 
 					for _,props in cond do
 						for prop,v in props do
-							if not(obj[prop] == v) then -- HACK: this must be warning
+							if not(obj[prop] == v) then -- INFO: this must be warning
 								return false
 							end
 						end
@@ -497,7 +561,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 				end
 			elseif vtp == "string" then
 				local ifs = {}
-				for i,cond in cond do ifs[i] = hf.pcheck(k.ul(cond)) end
+				for i,cond in cond do ifs[i] = hf.pcheck(k.unluaw(cond)) end
 				return function(obj:Instance):boolean
 					for _,if_ in ifs do
 						if not(if_(obj)) then
@@ -525,7 +589,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 		local wm_f_tp = "function"
 		local wm_f_lt, wm_f_ccq = wm[wm_f_tp], cq[wm_f_tp]
 		wm_f_lt[#wm_f_lt+1] = {props={_caching = false}, binds={"__call"}, start_or_end=true, overwrite=true, func=function(self:luaw,...:any):...any 
-			local sig = k.h(...)
+			local sig = k.hash(...)
 			local r = self._cache.__call[sig]
 			if r then return b.un(r)
 			else
@@ -544,7 +608,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 		local m_s_tp = "string"
 		local m_s_lt, m_s_ccq = m[m_s_tp], cq[m_s_tp]
 		function m_s_lt:run(...:any):...any
-			local h, c = k.h(self), self._cache["run"]
+			local h, c = k.hash(self), self._cache["run"]
 			local func = c[h]
 			if func then return func(...)
 			else
@@ -561,7 +625,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 		local m_n_lt, _m_n_ccq = m[m_n_tp], cq[m_n_tp]
 		function m_n_lt:r(mx:any, mn:any):boolean 
 			local nn = self._self
-			mx, mn = k.ul(k.int(mx, mn))
+			mx, mn = k.unluaw(k.int(mx, mn))
 			mn = (mn or 0)
 			return mx >= nn and nn >= mn 
 		end
@@ -579,47 +643,47 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			if p then return p.func(self,i)
 			elseif m then return m
 			else
-				m = k.l(self._self[i])
+				m = k.luaw(self._self[i])
 				m._method = true
 				return m
 			end
 		end 
-		op_u_lt.__newindex = function(self:luaw,i:any,v:any) self._self[i] = k.ul(v) end 
-		op_u_lt.__call = function(self:luaw,w:luaw,...):...any return self._self(((self._method and w._self) or w), ((of[self._self] and k.ul(...)) or ...)) end
+		op_u_lt.__newindex = function(self:luaw,i:any,v:any) self._self[i] = k.unluaw(v) end 
+		op_u_lt.__call = function(self:luaw,w:luaw,...):...any return self._self(((self._method and w._self) or w), ((of[self._self] and k.unluaw(...)) or ...)) end
 		op_u_lt.__iter = function(self:luaw) return b.nxt, self._iter_lt, nil end
 		for _,tp in atp do op[tp] = op_u_lt end
 
 	-- string
 		local op_s_tp = "string"
 		local op_s_lt = op[op_s_tp]
-		op_s_lt.__unm = function(self:str):str return k.l(b.rvrs(self._self)) end
+		op_s_lt.__unm = function(self:str):str return k.luaw(b.rvrs(self._self)) end
 		-- lt.__add = function(str1, str2) return str1..str2 end -- TODO: i need idea
 		op_s_lt.__sub = function(self:str, str_arg:any):str
 			local fstr = ""
-			str_arg = k.ul(k.str(str_arg))
+			str_arg = k.unluaw(k.str(str_arg))
 			for i=1,#str_arg do fstr = fstr..`[{b.sub(str_arg,i)}]` end
 			local r,_ = b.gsub(self._self, str_arg, "")
-			return k.l(r)
+			return k.luaw(r)
 		end
-		op_s_lt.__mul = function(self:str, num:any):str return k.l(b.rep(self._self, k.ul(k.int(num)))) end
-		op_s_lt.__pow = function(self:str, num:any):str return k.l(b.rep(self._self, k.ul(k.int(num)) ^ k.ul(#self))) end
+		op_s_lt.__mul = function(self:str, num:any):str return k.luaw(b.rep(self._self, k.unluaw(k.int(num)))) end
+		op_s_lt.__pow = function(self:str, num:any):str return k.luaw(b.rep(self._self, k.unluaw(k.int(num)) ^ k.unluaw(#self))) end
 		op_s_lt.__div = function(self:str, str_arg:any):int
 			local nstr = {}
-			str_arg = k.ul(k.str(str_arg))
+			str_arg = k.unluaw(k.str(str_arg))
 			for i=1,#str_arg do nstr[#nstr+1] = `[{str_arg[i]}]` end
 			local _,num = b.gsub(self._self, b.tcnc(nstr), "")
-			return k.l(num)
+			return k.luaw(num)
 		end
-		op_s_lt.__concat = function(self:str, str_arg:any):str return k.l(self._self..k.ul(k.str(str_arg))) end
-		op_s_lt.__eq = function(self:str, str_arg:any):boolean return self._self == k.ul(k.str(str_arg)) end
-		op_s_lt.__lt = function(self:str, str_arg:any):boolean return self._self < k.ul(k.str(str_arg)) end
-		op_s_lt.__le = function(self:str, str_arg:any):boolean return self._self <= k.ul(k.str(str_arg)) end
-		op_s_lt.__len = function(self:str):int return k.l(#self._self) end
+		op_s_lt.__concat = function(self:str, str_arg:any):str return k.luaw(self._self..k.unluaw(k.str(str_arg))) end
+		op_s_lt.__eq = function(self:str, str_arg:any):boolean return self._self == k.unluaw(k.str(str_arg)) end
+		op_s_lt.__lt = function(self:str, str_arg:any):boolean return self._self < k.unluaw(k.str(str_arg)) end
+		op_s_lt.__le = function(self:str, str_arg:any):boolean return self._self <= k.unluaw(k.str(str_arg)) end
+		op_s_lt.__len = function(self:str):int return k.luaw(#self._self) end
 		
 	-- function
 		local op_f_tp = "function"
 		local op_f_lt = op[op_f_tp]
-		op_f_lt.__unm = function(self:bin):bin return k.l(function(...) return b.pcl(self._self,...) end) end
+		op_f_lt.__unm = function(self:bin):bin return k.luaw(function(...) return b.pcl(self._self,...) end) end
 
 	-- table 
 		local op_t_tp = "table"
@@ -627,7 +691,7 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 		op_t_lt.__add = function(self:lts, lt_arg:any):lts
 			local lipairs = 0
 			for i,_ in ipairs(self._iter_lt) do lipairs = i end
-			for i,v in k.l(lt_arg) do 
+			for i,v in k.luaw(lt_arg) do 
 				if typeof(i) == "number" then
 					lipairs += 1
 					self[lipairs] = v
@@ -659,9 +723,9 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 				end
 			end; return self
 		end
-		op_t_lt.__div = function(self:lts, obj:any):int local r = 0; for _,v in self do if v == obj then r += 1 end end; return k.l(r) end
-		op_t_lt.__idiv = function(self:lts, obj:any):int local r = 0; for i,_ in self do if i == obj then r += 1 end end; return k.l(r) end
-		op_t_lt.__mod = function(self:lts, obj:any):int local r = 0; for i,v in self do if i == obj or v == obj then r += 1 end end; return k.l(r) end
+		op_t_lt.__div = function(self:lts, obj:any):int local r = 0; for _,v in self do if v == obj then r += 1 end end; return k.luaw(r) end
+		op_t_lt.__idiv = function(self:lts, obj:any):int local r = 0; for i,_ in self do if i == obj then r += 1 end end; return k.luaw(r) end
+		op_t_lt.__mod = function(self:lts, obj:any):int local r = 0; for i,v in self do if i == obj or v == obj then r += 1 end end; return k.luaw(r) end
 
 	-- TODO: Instance
 		-- ins + ins 2 в 1
@@ -671,19 +735,19 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 		local op_i_tp = "Instance"
 		local op_i_lt = op[op_i_tp]
 		op_i_lt.__call = function(self:ins, int_arg:int|number|any, cond:any):gins
-			local if_,r = hf.pcheck(k.ul(cond)),{self}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{self}
 			int_arg = (int_arg and k.int(int_arg)._self) or 1
 			for a=0, int_arg::number do
 				local tr = r; r = {}
 				for _,parent in tr do
 					for _,obj in parent do
-						if if_(k.ul(obj)) then 
+						if if_(k.unluaw(obj)) then 
 							r[#r+1] = obj
 						end
 					end
 				end
 			end; r._type = "GInstance"
-			return k.l(r)
+			return k.luaw(r)
 		end
 		op_i_lt.__len = function(self:ins) return #self._self:GetChildren() end -- TODO: comb with iter and cache
 		op_i_lt.__add = function(self:ins, ins_arg:ins&Instance):ins?
@@ -692,78 +756,82 @@ type meta_methods_lt<obj> = {__index: obj}&{__newindex: obj}&{__call: obj}&
 			else return b.err(`ins.__add: {ins_arg} is not a Instance/ins/gins`) end
 		end
 		op_i_lt.__sub = function(self:ins, cond:any):lts_<{str}>
-			local if_,r = hf.pcheck(k.ul(cond)),{}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{}
 			for _,obj in self do 
-				if if_(k.ul(obj)) then 
+				if if_(k.unluaw(obj)) then 
 					r[#r+1] = obj.Name
 					obj:Destroy()
 				end
-			end; return k.l(r)
+			end; return k.luaw(r)
 		end
 		op_i_lt.__mul = function(self:ins, cond:any):gins
-			local if_,r = hf.pcheck(k.ul(cond)),{}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{}
 			for _,obj in self do 
-				if if_(k.ul(obj)) then 
+				if if_(k.unluaw(obj)) then 
 					r[#r+1] = obj:Clone()
 				end
 			end; r._type = "GInstance"
-			return k.l(r)
+			return k.luaw(r)
 		end
 		op_i_lt.__pow = function(self:ins, cond:any):gins
-			local if_,r = hf.pcheck(k.ul(cond)),{}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{}
 			for _,obj in self do 
-				if if_(k.ul(obj)) then 
-					r[#r+1] = k.l(b.ifex(obj))
+				if if_(k.unluaw(obj)) then 
+					r[#r+1] = k.luaw(b.ifex(obj))
 				end
 			end; r._type = "GInstance"
-			return k.l(r)
+			return k.luaw(r)
 		end
 		op_i_lt.__div = function(self:ins, cond:any):gins
-			local if_,r = hf.pcheck(k.ul(cond)),{}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{}
 			for _,obj in self do 
-				if if_(k.ul(obj)) then 
+				if if_(k.unluaw(obj)) then 
 					obj.Parent = nil
 					r[#r+1] = obj
 				end
 			end; r._type = "GInstance"
-			return k.l(r)
+			return k.luaw(r)
 		end
 		op_i_lt.__idiv = function(self:ins, cond:any):gins
-			local if_,r = hf.pcheck(k.ul(cond)),{}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{}
 			for _,obj in self do 
-				if if_(k.ul(obj)) then 
+				if if_(k.unluaw(obj)) then 
 					local parent = obj.Parent
 					for _,child in obj do child.Parent = parent end
 					obj.Parent = nil
 					r[#r+1] = obj
 				end
 			end; r._type = "GInstance"
-			return k.l(r)
+			return k.luaw(r)
 		end
 		op_i_lt.__mod = function(self:ins, cond:any):gins
-			local if_,r = hf.pcheck(k.ul(cond)),{}
+			local if_,r = hf.pcheck(k.unluaw(cond)),{}
 			for _,obj in self._self:GetChildren() do 
-				if if_(k.ul(obj)) then 
+				if if_(k.unluaw(obj)) then 
 					r[#r+1] = obj
 				end
 			end; r._type = "GInstance"
-			return k.l(r)
+			return k.luaw(r)
 		end
 		op_i_lt.__eq = function(self:ins, ins_arg:ins&Instance):boolean?
 			if b.tpf(ins_arg) == "Instance" then
-				if k.il(ins_arg) then return self._self == ins_arg._self
+				if k.isluaw(ins_arg) then return self._self == ins_arg._self
 				else return self._self == (ins_arg::Instance) end
 			else return b.err(`ins.__eq: {ins_arg} is not a Instance/ins`) end
 		end
 		op_i_lt.__lt = function(self:ins, ins_arg:ins&Instance):boolean?
 			if b.tpf(ins_arg) == "Instance" then
-				if k.il(ins_arg) then return #self._self:GetChildren() < #ins_arg._self:GetChildren()
+				if k.isluaw(ins_arg) then return #self._self:GetChildren() < #ins_arg._self:GetChildren()
 				else return #self._self:GetChildren() < #ins_arg:GetChildren() end
 			else return b.err(`ins.__lt: {ins_arg} is not a Instance/ins`) end
 		end
 		op_i_lt.__le = function(self:ins, ins_arg:ins&Instance):boolean?
 			if b.tpf(ins_arg) == "Instance" then
-				if k.il(ins_arg) then return self._self == ins_arg._self or #self._self:GetChildren() < #ins_arg._self:GetChildren()
+				if k.isluaw(ins_arg) then return self._self == ins_arg._self or #self._self:GetChildren() < #ins_arg._self:GetChildren()
 				else return self._self == (ins_arg::Instance) or #self._self:GetChildren() < #ins_arg:GetChildren() end
 			else return b.err(`ins.__le: {ins_arg} is not a Instance/ins`) end
 		end
+
+	k.make()
+	
+end
